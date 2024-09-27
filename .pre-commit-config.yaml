@@ -4,12 +4,14 @@ repos:
     - repo: https://github.com/biobuddies/helicopyter
       rev: v2024.38.1
       hooks:
+          - id: dot-yaml
           - id: includes-sh
           - id: mypy
           - id: prettier-write
           - id: ruff-check-fix
           - id: ruff-format
           - id: uv-pip-compile
+          - id: yamllint
     # TODO auto-detect languages in Helicopyter
     - repo: local
       hooks:

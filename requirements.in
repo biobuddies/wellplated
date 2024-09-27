@@ -1,9 +1,4 @@
-# Run-time dependencies
-django
-django-extensions
-
-# Development tools, build-time dependencies
-build
+# Pre-commit
 django-stubs
 mypy
 pre-commit
@@ -11,5 +6,13 @@ pytest
 pytest-django
 pytest-mock
 ruff
-twine
 uv
+yamllint
+
+# Other build or development dependencies
+build
+twine
+
+# Run-time dependencies
+django
+django-extensions

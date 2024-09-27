@@ -74,6 +74,8 @@ packaging==24.1
     # via
     #   build
     #   pytest
+pathspec==0.12.1
+    # via yamllint
 pkginfo==1.10.0
     # via twine
 platformdirs==4.3.6
@@ -100,7 +102,9 @@ pytest-django==4.9.0
 pytest-mock==3.14.0
     # via -r requirements.in
 pyyaml==6.0.2
-    # via pre-commit
+    # via
+    #   pre-commit
+    #   yamllint
 readme-renderer==44.0
     # via twine
 requests==2.32.3
@@ -136,5 +140,7 @@ uv==0.4.16
     # via -r requirements.in
 virtualenv==20.26.5
     # via pre-commit
+yamllint==1.35.1
+    # via -r requirements.in
 zipp==3.20.2
     # via importlib-metadata
