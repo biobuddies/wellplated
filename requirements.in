@@ -1,0 +1,15 @@
+# Run-time dependencies
+django
+django-extensions
+
+# Development tools, build-time dependencies
+build
+django-stubs
+mypy
+pre-commit
+pytest
+pytest-django
+pytest-mock
+ruff
+twine
+uv
