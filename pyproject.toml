@@ -37,7 +37,7 @@ ignore = [
 ]
 
 [tool.mypy]
-plugins = ['mypy_drf_plugin.main', 'mypy_django_plugin.main']
+plugins = ['mypy_django_plugin.main']
 
 [tool.setuptools]
 packages = ['wellplated']
