@@ -3,6 +3,8 @@
 
 import sys
 
+from default import settings_module  # noqa: F401
+
 
 def main():
     """Run administrative tasks."""
