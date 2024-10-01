@@ -16,3 +16,4 @@ twine
 # Run-time dependencies
 django
 django-extensions
+wagtail
