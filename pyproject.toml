@@ -61,6 +61,10 @@ inline-quotes = 'single'
 [tool.ruff.lint.pydocstyle]
 convention = 'numpy' # Pretty arbitrary choice
 
+[tool.pytest.ini_options]
+DJANGO_SETTINGS_MODULE = 'demodj.settings'
+python_files = ['tests.py', 'test_*.py']
+
 [tool.setuptools]
 packages = ['wellplated']
 
