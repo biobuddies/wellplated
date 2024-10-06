@@ -39,6 +39,10 @@ ignore = [
 [tool.mypy]
 plugins = ['mypy_django_plugin.main']
 
+[tool.pytest.ini_options]
+DJANGO_SETTINGS_MODULE = 'demodj.settings'
+python_files = ['tests.py', 'test_*.py']
+
 [tool.setuptools]
 packages = ['wellplated']
 
