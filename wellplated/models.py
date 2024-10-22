@@ -44,6 +44,16 @@ class ContainerType(Model):
 
 
 class ContainerManager(Manager):
+    def create(self, *args, **kwargs) -> 'Container':
+        if 'barcode' not in kwargs:
+            container_type = kwargs['container_type']
+            container_type = self.get_queryset().select_for_update().get(pk=kwargs['container_type'].pk)
+            container_type.last_number += 1
+            container_type.save()
+            kwargs['barcode'] = container_type.barcode_format.format(container_type.last_number)
+        container = super().create(*args, **kwargs)
+        return container
+
     def get_untracked(self) -> 'Container':
         return self.get(barcode='untracked')
 
