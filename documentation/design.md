@@ -1,6 +1,9 @@
-## Research Use Only Versus Current Good Manufacturing Practices
-Some features are general and relevant to both approaches. Other features are specific
-or must 
+## Research Use Only (RUO) Versus Current Good Manufacturing Practices (CGMP)
+Some features are general and relevant to both contexts. Some features only make sense in one context. Some features need to be implemented differently in each context.
+
+The exact approach is intentionally left open and undecided until more information is available. Theoretically, possible approaches include:
+* A build for CGMP, which the RUO build extends
+* A common, shared base and two specialized builds
 
 ## Models
 ### Containers

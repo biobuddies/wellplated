@@ -32,9 +32,6 @@ line-length = 100
 quote-style = 'single'
 skip-magic-trailing-comma = true
 
-[tool.ruff.isort]
-split-on-trailing-comma = false
-
 [tool.ruff.lint]
 extend-select = ['D213'] # Beginning-end symmetry
 fixable = ['ALL']
@@ -57,6 +54,9 @@ select = ['ALL']
 
 [tool.ruff.lint.flake8-quotes]
 inline-quotes = 'single'
+
+[tool.ruff.lint.isort]
+split-on-trailing-comma = false
 
 [tool.ruff.lint.pydocstyle]
 convention = 'numpy' # Pretty arbitrary choice
