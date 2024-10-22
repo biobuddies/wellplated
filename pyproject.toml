@@ -14,30 +14,52 @@ dependencies = ['django']
 dynamic = ['version']
 name = 'wellplated'
 readme = 'README.md'
+requires-python = '>=3.10'
 
 [project.urls]
 Homepage = 'https://github.com/biobuddies/wellplated'
+
+[tool.django-stubs]
+django_settings_module = 'demodj.settings'
+
+[tool.mypy]
+plugins = ['mypy_django_plugin.main']
+
+[tool.ruff]
+line-length = 100
 
 [tool.ruff.format]
 quote-style = 'single'
 skip-magic-trailing-comma = true
 
+[tool.ruff.isort]
+split-on-trailing-comma = false
+
+[tool.ruff.lint]
+extend-select = ['D213'] # Beginning-end symmetry
+fixable = ['ALL']
+ignore = [
+    'ANN101', # Deprecated and will be removed in a future release
+    'COM812', # Insists on join([],) over join([])
+    'D400',   # Sentence fragments work well, so don't require a period
+    'EM101',  # Simple code is more important than simple tracebacks
+    'EM102',  # Simple code is more important than simple tracebacks
+    'PT013',  # `import pytest` would be inconsistent with other imports
+    'Q000',   # ruff format will single quote
+    'Q001',   # ruff format will single quote
+    'Q003',   # ruff format will single quote
+    'TD002',  # The git log records who wrote a TODO line
+    'TD004',  # A colon takes up space without really improving readability
+    'TD002',  # The git log records who wrote a TODO line
+    'TRY002', # Forces premature specialization; the right time to subclass is when the exception starts being caught
+]
+select = ['ALL']
+
 [tool.ruff.lint.flake8-quotes]
 inline-quotes = 'single'
 
-[tool.django-stubs]
-django_settings_module = 'demodj.settings'
-
-[tool.ruff]
-line-length = 100
-
-[tool.ruff.lint]
-ignore = [
-    'EM101', # Allow exceptions to use string literals because keeping code as simple as possible is more important than keeping tracebacks as simple as possible.
-]
-
-[tool.mypy]
-plugins = ['mypy_drf_plugin.main', 'mypy_django_plugin.main']
+[tool.ruff.lint.pydocstyle]
+convention = 'numpy' # Pretty arbitrary choice
 
 [tool.setuptools]
 packages = ['wellplated']
