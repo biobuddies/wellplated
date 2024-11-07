@@ -21,7 +21,11 @@ from wagtail.admin.forms.models import WagtailAdminModelForm
 from wagtail.admin.panels import FieldPanel, InlinePanel
 from wagtail.snippets.models import register_snippet
 
+
+
 label_1536 = compile(r'^(?P<high_row>A?)(?P<low_row>[A-Z])(?P<column>[0-9]+)$')
+
+
 
 class ContainerTypeManager(Manager):
     def get_untracked(self) -> 'ContainerType':
@@ -50,6 +54,9 @@ class ContainerManager(Manager):
 
 @register_snippet
 class Container(ClusterableModel):
+    """
+    Tube, plate, or other type of container with identifying barcode
+    """
     barcode = CharField(max_length=128, primary_key=True)
     container_type = ForeignKey(ContainerType, on_delete=PROTECT)
     created_at = DateTimeField(auto_now_add=True)
@@ -92,7 +99,7 @@ class Well(Model):
     """
 
     container = ParentalKey(Container, on_delete=PROTECT, related_name='wells')
-    row = PositiveIntegerField()
+    row = PositiveSmallIntegerField()
     column = PositiveSmallIntegerField()
 
     class Meta:
@@ -127,14 +134,18 @@ class Plan(Model):
     created_at = DateTimeField(auto_now_add=True)
     created_by = ForeignKey(User, on_delete=PROTECT, related_name='plans_created')
     assigned_to = ForeignKey(User, on_delete=PROTECT, null=True, blank=True, related_name='plans_assigned')
+    # TODO status such as planned, in progress, canceled, failed, complete
+    # TODO started_at datetime
+    # TODO duration time
 
     def __str__(self) -> str:
         return f'plan {self.pk} {self.assigned_to.username if self.assigned_to else "unassigned"}'
 
+
 @register_snippet
 class Transfer(Model):
     """
-    Transfer from one well to another.
+    Movement of material from one well to another, usually in liquid form
 
     The same (to, fro) may appear multiple times in the same plan to enable transferring
     a volume exceeding the pipette or tip size.
