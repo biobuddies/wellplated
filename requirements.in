@@ -1,4 +1,5 @@
 # Pre-commit
+coverage
 django-stubs
 mypy
 pre-commit

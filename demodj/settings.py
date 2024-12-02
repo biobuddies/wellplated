@@ -130,3 +130,5 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 WAGTAIL_SITE_NAME = 'Well Plated Demo'
 WAGTAILADMIN_BASE_URL = 'off'
+
+SHELL_PLUS_PRINT_SQL_TRUNCATE = None

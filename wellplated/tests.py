@@ -12,11 +12,11 @@ def test_untracked_data_migration():
     assert untracked_container_type.purpose == 'untracked'
 
     untracked_container = Container.objects.get_untracked()
-    assert untracked_container.barcode == 'untracked'
+    assert untracked_container.code == 'untracked'
 
     assert untracked_container.container_type == untracked_container_type
 
-    assert set(map(str, untracked_container.wells.all())) == {'untracked.A01'}
+    assert set(map(str, untracked_container.wells.all())) == {'untracked/A01'}
 
 
 @mark.django_db
@@ -24,33 +24,33 @@ def test_containertype_purpose_uniqueness():
     """
     ContainerTypes must have unique purposes.
     """
-    ContainerType.objects.create(purpose='final-tube', barcode_format='t{}')
+    ContainerType.objects.create(purpose='final-tube', code_format='t{}')
     with raises(IntegrityError):
-        ContainerType.objects.create(purpose='final-tube', barcode_format='tube{}')
+        ContainerType.objects.create(purpose='final-tube', code_format='tube{}')
 
 @mark.django_db
-def test_containertype_barcodeformat_uniqueness():
+def test_containertype_codeformat_uniqueness():
     """
-    ContainerTypes must have unique barcode formats.
+    ContainerTypes must have unique code formats.
     """
-    ContainerType.objects.create(purpose='final-tube', barcode_format='t{}')
+    ContainerType.objects.create(purpose='final-tube', code_format='t{}')
     with raises(IntegrityError):
-        ContainerType.objects.create(purpose='mix-tube', barcode_format='t{}')
+        ContainerType.objects.create(purpose='mix-tube', code_format='t{}')
 
 @mark.django_db
-def test_container_barcode_uniqueness():
+def test_container_code_uniqueness():
     """
-    Containers must have unique barcodes.
+    Containers must have unique codes.
     """
-    Container.objects.create(barcode='t0', container_type=ContainerType.objects.get_untracked())
+    Container.objects.create(code='t0', container_type=ContainerType.objects.get_untracked())
     with raises(IntegrityError):
-        Container.objects.create(barcode='t0', container_type=ContainerType.objects.get_untracked())
+        Container.objects.create(code='t0', container_type=ContainerType.objects.get_untracked())
 
 def test_container_slash_well(mocker):
     """
     Containers must correctly translate "Battleship notation" labels to zero-indexed rows and columns.
     """
-    t0 = Container(barcode='t0')
+    t0 = Container(code='t0')
     mock_wells = mocker.patch.object(Container, 'wells', autospec=True)
     t0 / 'A01'  # uppercase row, zero padded column, top left
     t0 / 'H12'  # double digit column, bottom right of 96-well plate
@@ -64,7 +64,7 @@ def test_container_slash_well(mocker):
     ]
 
 def test_container_slash_well_mismatch(mocker):
-    t0 = Container(barcode='t0')
+    t0 = Container(code='t0')
     mock_wells = mocker.patch.object(Container, 'wells', autospec=True)
     with raises(ValueError):
         t0 / ''
