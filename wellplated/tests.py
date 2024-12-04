@@ -3,6 +3,7 @@ from django.db.models import PositiveSmallIntegerField
 from django.db.models.functions import Cast, Substr
 from django.db.utils import IntegrityError
 from pytest import mark, raises
+
 from wellplated.models import Container, Format, Plan, Transfer, Well
 
 
@@ -19,9 +20,7 @@ def test_untracked_data_migration():
     untracked_formats = Format.objects.filter(purpose__in=('start', 'end'))
     assert set(untracked_formats.values_list('prefix', flat=True)) == {'start', 'end'}
 
-    untracked_container_wells = Well.objects.filter(
-        container__format__in=untracked_formats
-    )
+    untracked_container_wells = Well.objects.filter(container__format__in=untracked_formats)
     assert set(map(str, untracked_container_wells)) == {'start.A1', 'end.A1'}
 
 
@@ -34,6 +33,7 @@ def test_format_purpose_uniqueness():
     with raises(IntegrityError):
         Format.objects.create(prefix='ft2', purpose='final-tube')
 
+
 @mark.django_db
 def test_format_prefix_uniqueness():
     """
@@ -43,6 +43,7 @@ def test_format_prefix_uniqueness():
     with raises(IntegrityError):
         Format.objects.create(prefix='t', purpose='mix-tube')
 
+
 @mark.django_db
 def test_format_dot_prevention():
     """
@@ -50,6 +51,7 @@ def test_format_dot_prevention():
     """
     with raises(IntegrityError):
         Format.objects.create(prefix='.', purpose='dot')
+
 
 @mark.django_db
 def test_container_code_uniqueness():
@@ -60,18 +62,21 @@ def test_container_code_uniqueness():
     with raises(IntegrityError):
         Container.objects.create(code='t0', format=Format.objects.get(purpose='start'))
 
+
 @mark.django_db
 def test_container_serial_codes():
     """
     Sequential calls to create must generate monotonically increasing numbers.
     """
     final_tube = Format.objects.create(prefix='f', purpose='test')
-    codes = Container.objects.filter(
-        pk__in=[
-            Container.objects.create(format=final_tube).pk
-            for _ in range(10)
-        ]
-    ).order_by('pk').annotate(number=Cast(Substr('code', 2), PositiveSmallIntegerField())).values_list('number', flat=True)
+    codes = (
+        Container.objects.filter(
+            pk__in=[Container.objects.create(format=final_tube).pk for _ in range(10)]
+        )
+        .order_by('pk')
+        .annotate(number=Cast(Substr('code', 2), PositiveSmallIntegerField()))
+        .values_list('number', flat=True)
+    )
     assert tuple(codes) == tuple(range(1, 11))
 
 

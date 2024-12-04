@@ -1,33 +1,24 @@
+from django.contrib.auth.models import User
 from django.db.models import (
-    Q,
-    QuerySet,
+    PROTECT,
     CharField,
     CheckConstraint,
     DateTimeField,
-    F,
     ForeignKey,
-    GeneratedField,
-    JSONField,
     Manager,
     ManyToManyField,
     Model,
-    PROTECT,
     PositiveIntegerField,
     PositiveSmallIntegerField,
-    TextChoices,
-    IntegerChoices,
+    Q,
+    QuerySet,
     TextField,
     UniqueConstraint,
-    Value,
 )
-from django.db.models.functions import Cast, Chr, Concat, LPad, Length, Ord
-from django.contrib.auth.models import User
+from django.db.models.functions import Length
 from modelcluster.fields import ParentalKey
-from modelcluster.models import ClusterableModel
-from wagtail.admin.forms.models import WagtailAdminModelForm
 from wagtail.admin.panels import FieldPanel, InlinePanel
 from wagtail.snippets.models import register_snippet
-
 
 CharField.register_lookup(Length)
 
@@ -38,9 +29,15 @@ class Format(Model):
     Combination of physical dimensions and planned usage
     """
 
-    prefix = CharField(editable=False, max_length=128, primary_key=True)  # Prefix string for Container serial codes
-    pad_to = PositiveIntegerField(default=8, editable=False)  # Suffix length for Container serial codes
-    last = PositiveIntegerField(default=0)  # Last assigned numerical suffix for Container serial codes
+    prefix = CharField(
+        editable=False, max_length=128, primary_key=True
+    )  # Prefix string for Container serial codes
+    pad_to = PositiveIntegerField(
+        default=8, editable=False
+    )  # Suffix length for Container serial codes
+    last = PositiveIntegerField(
+        default=0
+    )  # Last assigned numerical suffix for Container serial codes
 
     # Rows must range between 'A' and this (inclusive)
     bottom_row = CharField(default='H', editable=False, max_length=2)
@@ -52,9 +49,7 @@ class Format(Model):
     purpose = TextField(unique=True)  # How the contents of wells should be interpreted
 
     class Meta:
-        constraints = (
-            CheckConstraint(check=~Q(prefix__contains='.'), name='no-dot-in-prefix'),
-        )
+        constraints = (CheckConstraint(check=~Q(prefix__contains='.'), name='no-dot-in-prefix'),)
 
     def encode(self, number: int) -> str:
         return self.prefix + ('{:0%d}' % self.pad_to).format(self.last)
@@ -103,9 +98,7 @@ class Container(Model):  # TODO get ClusterableModel working
     ]
 
     class Meta:
-        constraints = (
-            CheckConstraint(check=~Q(prefix__contains='.'), name='no-dot-in-prefix'),
-        )
+        constraints = (CheckConstraint(check=~Q(prefix__contains='.'), name='no-dot-in-prefix'),)
 
     def __getattr__(self, label: str) -> 'Well':
         if label in (
@@ -152,7 +145,7 @@ class Well(Model):
         through='Transfer',
         through_fields=('source', 'sink'),
         symmetrical=False,
-        related_name='sinks'
+        related_name='sinks',
     )
 
     objects = WellManager()
@@ -160,7 +153,7 @@ class Well(Model):
     class Meta:
         constraints = (
             UniqueConstraint(fields=('container', 'label'), name='unique_container_well_label'),
-            #CheckConstraint('label_length', check=Q(label__length=F('container__container_type__bottom_row__'))
+            # CheckConstraint('label_length', check=Q(label__length=F('container__container_type__bottom_row__'))
         )
 
     def __str__(self) -> str:
