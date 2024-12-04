@@ -10,20 +10,15 @@ from django.db import migrations, models
 
 
 def create_untracked(apps, _schema_editor):
-    container = apps.get_model('wellplated', 'Container').objects.create(
-        barcode='untracked',
-        container_type=apps.get_model('wellplated', 'ContainerType').objects.create(
-            barcode_format='untracked', purpose='untracked'
-        ),
-    )
-    container.well_set.add(apps.get_model('wellplated', 'Well')(row=0, column=0))
-    container.well_set.commit()
-
-
-def delete_untracked(apps, _schema_editor):
-    apps.get_model('wellplated', 'Well').objects.get(container__barcode='untracked').delete()
-    apps.get_model('wellplated', 'Container').objects.get(barcode='untracked').delete()
-    apps.get_model('wellplated', 'ContainerType').objects.get(purpose='untracked').delete()
+    for purpose in ('start', 'end'):
+        container = apps.get_model('wellplated', 'Container').objects.create(
+            code=purpose,
+            format=apps.get_model('wellplated', 'Format').objects.create(
+                prefix=purpose, bottom_row='A', right_column=1, purpose=purpose,
+            ),
+        )
+        container.wells.add(apps.get_model('wellplated', 'Well')(label='A1'))
+        container.wells.commit()
 
 
 class Migration(migrations.Migration):
@@ -35,20 +30,27 @@ class Migration(migrations.Migration):
 
     operations = [
         migrations.CreateModel(
-            name='ContainerType',
+            name='Format',
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('last_number', models.PositiveIntegerField(default=0)),
-                ('code_format', models.CharField(max_length=128, unique=True)),
+                ('prefix', models.CharField(editable=False, max_length=128, primary_key=True, serialize=False)),
+                ('pad_to', models.PositiveIntegerField(default=8, editable=False)),
+                ('last', models.PositiveIntegerField(default=0)),
+                ('bottom_row', models.CharField(default='H', editable=False, max_length=2)),
+                ('right_column', models.PositiveSmallIntegerField(default=12, editable=False)),
+                ('created_at', models.DateTimeField(auto_now_add=True, editable=False)),
                 ('purpose', models.TextField(unique=True)),
             ],
+        ),
+        migrations.AddConstraint(
+            model_name='format',
+            constraint=models.CheckConstraint(condition=~models.Q(prefix__contains='.'), name='no-dot-in-prefix'),
         ),
         migrations.CreateModel(
             name='Container',
             fields=[
-                ('code', models.CharField(max_length=128, primary_key=True, serialize=False)),
-                ('created_at', models.DateTimeField(auto_now_add=True)),
-                ('container_type', models.ForeignKey(on_delete=django.db.models.deletion.PROTECT, to='wellplated.containertype')),
+                ('code', models.CharField(editable=False, max_length=128, primary_key=True, serialize=False)),
+                ('created_at', models.DateTimeField(auto_now_add=True, editable=False)),
+                ('format', models.ForeignKey(editable=False, on_delete=django.db.models.deletion.PROTECT, related_name='containers', to='wellplated.format')),
             ],
             options={
                 'abstract': False,
@@ -58,21 +60,16 @@ class Migration(migrations.Migration):
             name='Well',
             fields=[
                 ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('row', models.PositiveIntegerField()),
-                ('column', models.PositiveSmallIntegerField()),
-                (
-                    'label',
-                    models.GeneratedField(db_persist=True, expression=django.db.models.functions.text.Concat(django.db.models.functions.text.Chr(django.db.models.expressions.CombinedExpression(models.F('row'), '+', models.Value(65))), django.db.models.functions.text.LPad(django.db.models.functions.comparison.Cast(django.db.models.expressions.CombinedExpression(models.F('column'), '+', models.Value(1)), models.CharField()), 2, models.Value('0')), output_field=models.CharField()), output_field=models.CharField(max_length=4)),
-                ),
-                ('container', modelcluster.fields.ParentalKey(on_delete=django.db.models.deletion.PROTECT, related_name='wells', to='wellplated.container')),
+                ('container', modelcluster.fields.ParentalKey(editable=False, on_delete=django.db.models.deletion.PROTECT, related_name='wells', to='wellplated.container')),
+                ('label', models.CharField(editable=False, max_length=4)),
             ],
         ),
         migrations.AddConstraint(
             model_name='well',
-            constraint=models.UniqueConstraint(fields=('container', 'row', 'column'), name='unique_well'),
+            constraint=models.UniqueConstraint(fields=('container', 'label'), name='unique_container_well_label'),
         ),
 
-        migrations.RunPython(create_untracked, delete_untracked),
+        migrations.RunPython(create_untracked, migrations.RunPython.noop),
 
         migrations.CreateModel(
             name='Plan',
@@ -87,8 +84,13 @@ class Migration(migrations.Migration):
             fields=[
                 ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
                 ('plan', models.ForeignKey(on_delete=django.db.models.deletion.PROTECT, related_name='transfers', to='wellplated.plan')),
-                ('fro', models.ForeignKey(on_delete=django.db.models.deletion.PROTECT, related_name='+', to='wellplated.well')),
-                ('to', models.ForeignKey(on_delete=django.db.models.deletion.PROTECT, related_name='+', to='wellplated.well')),
+                ('source', models.ForeignKey(on_delete=django.db.models.deletion.PROTECT, related_name='+', to='wellplated.well')),
+                ('sink', models.ForeignKey(on_delete=django.db.models.deletion.PROTECT, related_name='+', to='wellplated.well')),
             ],
+        ),
+        migrations.AddField(
+            model_name='well',
+            name='sources',
+            field=models.ManyToManyField(related_name='sinks', through='wellplated.Transfer', to='wellplated.well'),
         ),
     ]

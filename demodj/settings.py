@@ -111,7 +111,7 @@ LANGUAGE_CODE = 'en-us'
 
 TIME_ZONE = 'UTC'
 
-USE_I18N = True
+USE_I18N = False
 
 USE_TZ = True
 
@@ -130,5 +130,7 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 WAGTAIL_SITE_NAME = 'Well Plated Demo'
 WAGTAILADMIN_BASE_URL = 'off'
+
+FORMS_URLFIELD_ASSUME_HTTPS = True
 
 SHELL_PLUS_PRINT_SQL_TRUNCATE = None
