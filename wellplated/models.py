@@ -78,6 +78,7 @@ class ContainerManager(Manager):
         Create a new container and (unless the code parameter is overridden) assign it the
         next available serial code.
         """
+        print('create')
         if 'code' not in kwargs:
             format = Format.objects.select_for_update().get(pk=format.pk)
             format.current_number += 1
