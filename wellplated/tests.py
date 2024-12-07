@@ -69,15 +69,21 @@ def test_container_serial_codes():
     Sequential calls to create must generate monotonically increasing numbers.
     """
     final_tube = Format.objects.create(prefix='f', purpose='test')
+    new_container_pks = [
+        Container.objects.create(format=final_tube).pk,
+        Format.containers.add(Container(format=final_tube)).pk,
+        Container.objects.create(format=final_tube).pk,
+        Format.containers.add(Container(format=final_tube)).pk,
+    ]
     codes = (
         Container.objects.filter(
-            pk__in=[Container.objects.create(format=final_tube).pk for _ in range(10)]
+            pk__in=new_container_pks
         )
         .order_by('pk')
         .annotate(number=Cast(Substr('code', 2), PositiveSmallIntegerField()))
         .values_list('number', flat=True)
     )
-    assert tuple(codes) == tuple(range(1, 11))
+    assert tuple(codes) == tuple(range(1, 5))
 
 
 def test_container_dot_well_label(mocker):
