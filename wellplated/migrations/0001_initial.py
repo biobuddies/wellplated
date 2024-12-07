@@ -45,7 +45,7 @@ def constrain_format() -> list[migrations.AddConstraint]:
         constraints.append(
             migrations.AddConstraint(
                 model_name='format',
-                constraint=models.CheckConstraint(condition=condition, name=name),
+                constraint=CheckConstraint(condition=condition, name=name),
             )
         )
     return constraints

@@ -13,15 +13,16 @@ def get_test_user() -> 'User':
 
 
 @mark.django_db
-def test_untracked_data_migration():
+def test_untracked_data():
     """
-    Initial data must exist as expected.
+    Initial data for start and end of tracking must exist as expected.
     """
-    untracked_formats = Format.objects.filter(purpose__in=('start', 'end'))
-    assert set(untracked_formats.values_list('prefix', flat=True)) == {'start', 'end'}
+    formats = Format.objects.filter(purpose__in=('start', 'end'))
+    assert set(formats.values_list('prefix', flat=True)) == {'start', 'end'}
 
-    untracked_container_wells = Well.objects.filter(container__format__in=untracked_formats)
-    assert set(map(str, untracked_container_wells)) == {'start.A1', 'end.A1'}
+    assert set(Container.objects.filter(format__in=formats).values_list('code', flat=True)) == {'start', 'end'}
+
+    assert set(map(str, Well.objects.filter(container__format__in=formats))) == {'start.A1', 'end.A1'}
 
 
 @mark.django_db
@@ -43,6 +44,19 @@ def test_format_prefix_uniqueness():
     with raises(IntegrityError):
         Format.objects.create(prefix='t', purpose='mix-tube')
 
+@mark.django_db
+@mark.parametrize(
+    'bottom_row,right_column',
+    (
+        ('@', 1), ('Q', 1), ('A', 0), ('A', 25),
+    ),
+)
+def test_format_row_column_constraints(bottom_row, right_column):
+    """
+    Format rows and columns must stay in range.
+    """
+    with raises(IntegrityError):
+        Format.objects.create(prefix='t', purpose='test', bottom_row=bottom_row, right_column=right_column)
 
 @mark.django_db
 def test_format_dot_prevention():
@@ -71,19 +85,18 @@ def test_container_serial_codes():
     final_tube = Format.objects.create(prefix='f', purpose='test')
     new_container_pks = [
         Container.objects.create(format=final_tube).pk,
-        Format.containers.add(Container(format=final_tube)).pk,
         Container.objects.create(format=final_tube).pk,
-        Format.containers.add(Container(format=final_tube)).pk,
+        Container.objects.create(format=final_tube).pk,
+        # tried doing this too but it doesn't return an object and leaves created_at NULL
+        # final_tube.containers.add(Container(format=final_tube), bulk=False),
     ]
     codes = (
-        Container.objects.filter(
-            pk__in=new_container_pks
-        )
+        Container.objects.filter(pk__in=new_container_pks)
         .order_by('pk')
         .annotate(number=Cast(Substr('code', 2), PositiveSmallIntegerField()))
         .values_list('number', flat=True)
     )
-    assert tuple(codes) == tuple(range(1, 5))
+    assert tuple(codes) == tuple(range(1, 4))
 
 
 def test_container_dot_well_label(mocker):

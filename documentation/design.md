@@ -1,15 +1,26 @@
 ## Research Use Only (RUO) Versus Current Good Manufacturing Practices (CGMP)
-Some features are general and relevant to both contexts. Some features only make sense in one context. Some features need to be implemented differently in each context.
+Some features are general and relevant to both contexts. Some features only make sense in one
+context. Some features need to be implemented differently in each context.
 
-The exact approach is intentionally left open and undecided until more information is available. Theoretically, possible approaches include:
-* A build for CGMP, which the RUO build extends
-* A common, shared base and two specialized builds
+Hopefully the initial features fall into the former dual use category. As features emerge
+that are only relevant to one environment, or need specialized implementations, the best
+approach for organizing them will hopefully become clearer. Theoretically, possible approaches
+include:
+* A CGMP base, which the RUO build extends
+* A common, shared base which both a CGMP extension and an RUO extension
+
+We should keep in mind the risk reduction benefits of graduating software from 1. development and
+testing, to 2. RUO production use, feedback, and software iteration, to 3. CGMP production use.
 
 ## Models
 ### Containers
-A `Container` models multi-`Well` plates with multiple rows and multiple columns. It models single-`Well` tubes with a single row and a single column.
+To support plates, a `Container` models a two-dimensional matrix of `Well`s. Tubes are treated as
+a degenerate case with a single row and a single column. For easy checking, the coordinate system
+matches what is commonly molded onto plates, with a character for the row and a number for the
+column. Zero padding to a uniform width is performed to make sorting exported data easy, for
+tidy display.
 
-To avoid mixups, each `Container` must have a unique alphanumberic human and machine readable identifier called `code`. The following ways of making the `code` physically visible are supported:
+To avoid mixups, each `Container` is assigned a unique alphanumberic human and machine readable identifier called `code`. The following ways of making the `code` physically visible are supported:
 * Handwriting the letters and numbers on the `Container` (better than unidentified; maybe well suited to quick development; for consistent legibility consider the alternatives below)
 * Printing and sticking a label with with letters and numbers to the `Container`
 * Printing and sticking a barcode representation of the letters and numbers to the `Container`
@@ -18,6 +29,16 @@ To avoid mixups, each `Container` must have a unique alphanumberic human and mac
 Tubes in a rack can be modeled as many single-`Well` `Container`s. This is a good choice when the tubes are only in this arrangement for one workflow step. If helpful, information about the rack can be recorded in related `Plan` or `Result` objects.
 
 Tubes in a rack can also be modeled as one multi-`Well` `Container`. This is a good choice when the tubes remain in the same arrangement for multiple workflow steps. If helpful, information about the tubes (such as tube-specific barcodes) can be be recorded in related `Plan` or `Result` objects.
+
+Separate models per `Format`, and a unified model with separately incrementing numbers per prefix,
+were considered, but the code complexity of those approaches seems unwarranted. The first model to
+overflow will probably be `Well`. The maximum value for BigAutoField is 9223372036854775807. If
+`Well`s were fully populated, 9223372036854775807 // 1536 == 6004799503160661 (16 digits)
+`Containers` would be supported. If `Well`s are sparsely populated and plates have 384
+or fewer wells, then the limit is a bit higher.
+
+Resource exhaustion is a classic failure mode, but easily tracked and forecasted. TODO: add
+django-healthcheck for AutoField/BigAutoField exhaustion, similar to free disk space.
 
 ### Container Formats
 Containers are defined as sharing the same type if the following are exactly equal:
