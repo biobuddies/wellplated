@@ -134,3 +134,7 @@ WAGTAILADMIN_BASE_URL = 'off'
 FORMS_URLFIELD_ASSUME_HTTPS = True
 
 SHELL_PLUS_PRINT_SQL_TRUNCATE = None
+
+import sqlite3
+
+sqlite3.enable_callback_tracebacks(True)

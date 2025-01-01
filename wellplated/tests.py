@@ -2,6 +2,8 @@ from django.contrib.auth import get_user_model
 from django.db.models import PositiveSmallIntegerField
 from django.db.models.functions import Cast, Substr
 from django.db.utils import IntegrityError
+from django.db.models.query import QuerySet
+
 from pytest import mark, raises
 
 from wellplated.models import Container, Format, Plan, Transfer, Well
@@ -17,12 +19,12 @@ def test_untracked_data():
     """
     Initial data for start and end of tracking must exist as expected.
     """
-    formats = Format.objects.filter(purpose__in=('start', 'end'))
+    formats = Format.objects.filter(purpose__in=('start', 'end')).order_by('pk')
     assert set(formats.values_list('prefix', flat=True)) == {'start', 'end'}
 
-    assert set(Container.objects.filter(format__in=formats).values_list('code', flat=True)) == {'start', 'end'}
+    assert set(Container.objects.filter(format__in=formats).values_list('code', flat=True)) == {'start000', 'end999'}
 
-    assert set(map(str, Well.objects.filter(container__format__in=formats))) == {'start.A1', 'end.A1'}
+    assert set(map(str, Well.objects.filter(container__format__in=formats).order_by('pk'))) == {'start000.A1', 'end999.A1'}
 
 
 @mark.django_db
@@ -48,7 +50,7 @@ def test_format_prefix_uniqueness():
 @mark.parametrize(
     'bottom_row,right_column',
     (
-        ('@', 1), ('Q', 1), ('A', 0), ('A', 25),
+        ('@', 1), ('Q', 1), ('A', -1), ('A', 0), ('A', 25), ('A', 100), ('AA', 1),
     ),
 )
 def test_format_row_column_constraints(bottom_row, right_column):
@@ -72,48 +74,54 @@ def test_container_code_uniqueness():
     """
     Containers must have unique codes.
     """
-    Container.objects.create(code='t0', format=Format.objects.get(purpose='start'))
+    final_tube = Format.objects.create(prefix='f', purpose='final-tube')
+    Container.objects.create(code='t0', format=final_tube)
     with raises(IntegrityError):
-        Container.objects.create(code='t0', format=Format.objects.get(purpose='start'))
+        Container.objects.create(code='t0', format=final_tube)
 
 
 @mark.django_db
-def test_container_serial_codes():
+def test_container_creation_codes():
     """
     Sequential calls to create must generate monotonically increasing numbers.
     """
-    final_tube = Format.objects.create(prefix='f', purpose='test')
+    final_tube = Format.objects.create(prefix='f', purpose='final-tube')
     new_container_pks = [
         Container.objects.create(format=final_tube).pk,
         Container.objects.create(format=final_tube).pk,
         Container.objects.create(format=final_tube).pk,
-        # tried doing this too but it doesn't return an object and leaves created_at NULL
-        # final_tube.containers.add(Container(format=final_tube), bulk=False),
     ]
-    codes = (
+    created_codes = (
         Container.objects.filter(pk__in=new_container_pks)
         .order_by('pk')
         .annotate(number=Cast(Substr('code', 2), PositiveSmallIntegerField()))
         .values_list('number', flat=True)
     )
-    assert tuple(codes) == tuple(range(1, 4))
+    assert tuple(created_codes) == (1000, 1001, 1002)
 
+    for _ in range(3):
+        final_tube.containers.add(Container(format=final_tube), bulk=False)
+    assert Container.objects.filter(format=final_tube).latest('pk').pk -  Container.objects.filter(format=final_tube).earliest('pk').pk == 5
 
+    Container.objects.bulk_create(Container(format=final_tube) for _ in range(3))
+    assert Container.objects.filter(format=final_tube).latest('pk').pk -  Container.objects.filter(format=final_tube).earliest('pk').pk == 8
+
+@mark.django_db
 def test_container_dot_well_label(mocker):
     """
     Containers must accept dot labels to access wells.
     """
-    t0 = Container(code='t0')
+    wip_tube = Container.objects.create(
+        format=Format.objects.create(bottom_row='P', right_column=24, prefix='wip', purpose='work-in-process-tube')
+    )
     mock_wells = mocker.patch.object(Container, 'wells', autospec=True)
-    t0.A01  # top left
-    t0.H12  # bottom right of 8 * 12 == 96-well plate
-    t0.P24  # bottom right of 16 * 24 == 384-well plate
-    t0.AF48  # double letter row, bottom right of 32 * 48 == 1536-well plate
+    wip_tube.A01  # top left
+    wip_tube.H12  # bottom right of 8 * 12 == 96-well plate
+    wip_tube.P24  # bottom right of 16 * 24 == 384-well plate
     assert mock_wells.method_calls == [
         mocker.call.get(label='A01'),
         mocker.call.get(label='H12'),
         mocker.call.get(label='P24'),
-        mocker.call.get(label='AF48'),
     ]
 
 

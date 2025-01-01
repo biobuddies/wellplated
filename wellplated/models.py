@@ -1,3 +1,7 @@
+from tkinter.constants import W
+from platformdirs import unix
+from re import compile
+
 from django.contrib.auth.models import User
 from django.db.models import (
     PROTECT,
@@ -6,6 +10,7 @@ from django.db.models import (
     DateTimeField,
     F,
     ForeignKey,
+    GeneratedField,
     Manager,
     ManyToManyField,
     Model,
@@ -14,14 +19,18 @@ from django.db.models import (
     Q,
     QuerySet,
     TextField,
+    Value,
     UniqueConstraint,
 )
-from django.db.models.functions import Cast, Length
+from django.db.models.functions import Cast, Concat, Length, LPad, Left, StrIndex, Substr
 from django.db.models.lookups import LessThanOrEqual
-from modelcluster.models import ClusterableModel
 from modelcluster.fields import ParentalKey
+from modelcluster.models import ClusterableModel
 from wagtail.admin.panels import FieldPanel, InlinePanel
 from wagtail.snippets.models import register_snippet
+
+LABEL_384 = compile(r'^(?P<row>[A-P])(?P<column>[012]?[0-9])$')
+MAX_CODE_LENGTH = 12  # TODO make this configurable
 
 CharField.register_lookup(Length)
 
@@ -29,20 +38,32 @@ CharField.register_lookup(Length)
 @register_snippet
 class Format(Model):
     """
-    Combination of physical dimensions and planned usage
+    Rows, columns, and planned usage
     """
-
     # Rows must range between 'A' and this (inclusive)
     bottom_row = CharField(default='H', editable=False, max_length=1)
     # Columns must range between 1 and this (inclusive)
     right_column = PositiveSmallIntegerField(default=12, editable=False)
+    # Zero padding to ease sorting and tidy displays
+    pad_column_to = GeneratedField(
+        db_persist=True,
+        editable=False,
+        expression=Length(Cast('right_column', CharField())),
+        output_field=PositiveSmallIntegerField(),
+    )
 
-    # Prefix string for Container serial codes
-    prefix = CharField(editable=False, max_length=128, primary_key=True)
-    # Last assigned number suffix for Container serial codes
-    current_number = PositiveIntegerField(default=0)
-    # Maximum possible number suffix for Container serial codes
-    max_number = PositiveIntegerField(default=99999999, editable=False)
+    prefix = CharField(editable=False, max_length=MAX_CODE_LENGTH - 1)
+
+    # GeneratedFields cannot be primary keys, but ForeignKey can reference any unique field.
+    # So pack the maximum row, maximum column, and prefix together so Container can use them
+    # in its own GeneratedFields, and Well can ForeignKey and constrain on them.
+    bottom_right_prefix = GeneratedField(
+        db_persist=True,
+        editable=False,
+        expression=Concat('bottom_row', 'right_column', Value('.'), 'prefix'),
+        output_field=CharField(max_length=bottom_row.max_length + 3 + prefix.max_length),
+        unique=True,
+    )
 
     created_at = DateTimeField(auto_now_add=True)
 
@@ -56,41 +77,18 @@ class Format(Model):
         constraints = (
             CheckConstraint(condition=condition, name=name)
             for name, condition in {
+                'single-character-bottom-row': Q(bottom_row__length=1),
                 'minimum-bottom-row-A': Q(bottom_row__gte='A'),
                 'maximum-bottom-row-P': Q(bottom_row__lte='P'),
                 'minimum-right-column-1': Q(right_column__gte=1),
                 'maximum-right-column-24': Q(right_column__lte=24),
-                # Dot/period separates Container serial code from well label
+                # Dot/period separates Container serial code from Well label
                 'dot-free-prefix': ~Q(prefix__contains='.'),
-                # Container serial codes must never overflow barcodes or human-readable labels
-                # TODO: configurable limit
-                'twelve-or-fewer-character-code': LessThanOrEqual(Length('prefix') + Length(Cast('max_number', CharField())), 12),
             }.items()
         )
 
     def __str__(self) -> str:
-        return f'{self.prefix}{self.max_number} {self.purpose}'
-
-
-class ContainerManager(Manager):
-    def create(self, *args, format: Format, **kwargs) -> 'Container':
-        """
-        Create a new container and (unless the code parameter is overridden) assign it the
-        next available serial code.
-        """
-        print('create')
-        if 'code' not in kwargs:
-            format = Format.objects.select_for_update().get(pk=format.pk)
-            format.current_number += 1
-            format.save(update_fields=['current_number'])
-            kwargs['code'] = format.prefix + ('{:0%sd}' % len(str(format.max_number))).format(format.current_number)
-        if not kwargs['code'].startswith(format.prefix):
-            raise ValueError(f'Container code {kwargs["code"]} must start with format prefix {format.prefix}')
-        number = int(kwargs['code'][len(format.prefix):])
-        if number > format.max_number:
-            raise ValueError(f'Container code {kwargs["code"]} exceeds format maximum {format.max_number}')
-        container = super().create(*args, format=format, **kwargs)
-        return container
+        return f'{self.bottom_right_prefix}'
 
 
 @register_snippet
@@ -98,37 +96,53 @@ class Container(ClusterableModel):
     """
     A Container is uniquely identified by its serial code and has Wells
     """
+    code = GeneratedField(
+        db_persist=True,
+        # TODO fix zero padding
+        expression=Concat(Substr('format', StrIndex('format', Value('.')) + Value(1)), LPad(Cast('id', CharField()), Length(Left('format', StrIndex('format', Value('.')))), Value('0'))),
+        editable=False,
+        output_field=CharField(max_length=MAX_CODE_LENGTH),
+        unique=True,
+    )
 
-    format = ForeignKey(Format, editable=False, on_delete=PROTECT, related_name='containers')
     created_at = DateTimeField(auto_now_add=True)
+    format = ForeignKey(Format, editable=False, null=False, on_delete=PROTECT, related_name='containers', to_field='bottom_right_prefix')
 
-    # Optimization: variable length fields last
-    code = CharField(editable=False, max_length=128, primary_key=True)
-
-    objects = ContainerManager()
-
-    # Do these need read_only?
     panels = [
         FieldPanel('code', read_only=True),
         FieldPanel('created_at', read_only=True),
         FieldPanel('format', read_only=True),
         InlinePanel('wells'),
     ]
-
+    
     def __getattr__(self, label: str) -> 'Well':
-        if label in (
-            '_cluster_related_objects',
-            '_prefetched_objects_cache',
-            'get_source_expressions',
-            'resolve_expression',
-        ):
-            raise AttributeError(f'{label} not set yet')
+        # ClusterableModel or other packages need an AttributeError for the following:
+        # _cluster_related_objects
+        # _prefetched_objects_cache
+        # get_source_expressions
+        # resolve_expression
 
-        # Can be expanded later to 96, 384, 1536 wells
-        if label == 'A01':
-            return self.wells.get(label='A01')
+        label_match = LABEL_384.match(label)
+        if not label_match or label_match.groupdict().keys() != {'row', 'column'}:
+            raise AttributeError(f'Failed to parse {label}')
+        row = label_match.groupdict()['row']
+        column = int(label_match.groupdict()['column'], 10)
 
-        raise Exception(f'Unknown label {label}')
+        error = []
+        if row < 'A':
+            error.append(f'{label} row {row} less than A')
+        elif row > self.format.bottom_row:
+            error.append(f'{label} row {row} greater than {self.format.bottom_row}')
+        if column < 1:
+            error.append(f'{label} column {column} less than 1')
+        elif column > self.format.right_column:
+            error.append(f'{label} column {column} greater than {self.format.right_column}')
+        if error:
+            raise AttributeError(', '.join(error))
+
+        return self.wells.get(
+            label=row + ('{:0%d}' % self.format.pad_column_to).format(column)
+        )
 
     def __str__(self) -> str:
         return self.code
@@ -144,7 +158,6 @@ class WellManager(Manager):
         return well
 
 
-
 class Well(Model):
     """
     One of multiple positions on a plate, or the singular position of a tube.
@@ -152,19 +165,16 @@ class Well(Model):
     Positions are stored and displayed as "Battleship notation" labels with alphabetical row and
     numerical column, the latter zero-padded for easy sorting and consistent length.
 
-    1-well tube/trough coordinate is A1
-    6-well plate coordinates range from A1 to B3
-    24-well plate coordinates range from A1 to D6
-
-    https://mscreen.lsi.umich.edu/mscreenwiki/index.php?title=COORDINATE
-    96-well plate coordinates range from A01 to H12
+    1-well   tube/trough  coordinate is   A1
+    6-well   plate coordinates range from A1 to B3
+    24-well  plate coordinates range from A1 to D6
+    96-well  plate coordinates range from A01 to H12
     384-well plate coordinates range from A01 to P24
-    1536-well plate coordinates range from A01 to AF48
     """
 
-    # TODO crush container and label together for natural primary keying
+    # TODO crush container and label together for natural primary keying?
     container = ParentalKey(Container, editable=False, on_delete=PROTECT, related_name='wells')
-    label = CharField(editable=False, max_length=4)
+    label = CharField(editable=False, max_length=3)
     sources = ManyToManyField(
         'self',
         through='Transfer',
@@ -180,6 +190,7 @@ class Well(Model):
             UniqueConstraint(fields=('container', 'label'), name='unique_container_well_label'),
             # CheckConstraint('label_length', check=Q(label__length=F('container__container_type__bottom_row__'))
         )
+    
 
     def __str__(self) -> str:
         return f'{self.container}.{self.label}'

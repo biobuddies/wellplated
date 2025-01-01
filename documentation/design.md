@@ -20,15 +20,22 @@ matches what is commonly molded onto plates, with a character for the row and a 
 column. Zero padding to a uniform width is performed to make sorting exported data easy, for
 tidy display.
 
-To avoid mixups, each `Container` is assigned a unique alphanumberic human and machine readable identifier called `code`. The following ways of making the `code` physically visible are supported:
-* Handwriting the letters and numbers on the `Container` (better than unidentified; maybe well suited to quick development; for consistent legibility consider the alternatives below)
-* Printing and sticking a label with with letters and numbers to the `Container`
+To avoid mixups, each `Container` is assigned a unique alphanumberic human and machine readable
+identifier called `code`. It is designed to support the following physical labeling:
+* Handwriting the letters and numbers on the `Container` (better than unidentified; maybe well
+  suited to quick development; for consistent legibility consider the alternatives below)
+* Printing and sticking a label with human readable letters and numbers to the `Container`
 * Printing and sticking a barcode representation of the letters and numbers to the `Container`
-* Using `Containers` which already have a barcode representation of the letters and numbers printed on them
+* Scanning pre-barcoded `Containers` and recording their values in the database
 
-Tubes in a rack can be modeled as many single-`Well` `Container`s. This is a good choice when the tubes are only in this arrangement for one workflow step. If helpful, information about the rack can be recorded in related `Plan` or `Result` objects.
+Tubes in a rack can be modeled as many single-`Well` `Container`s. This is a good choice when
+the tubes are only in this arrangement for one workflow step. If helpful, information about the
+rack can be recorded in related `Plan` or `Result` objects.
 
-Tubes in a rack can also be modeled as one multi-`Well` `Container`. This is a good choice when the tubes remain in the same arrangement for multiple workflow steps. If helpful, information about the tubes (such as tube-specific barcodes) can be be recorded in related `Plan` or `Result` objects.
+Tubes in a rack can also be modeled as one multi-`Well` `Container`. This is a good choice when
+the tubes remain in the same arrangement for multiple workflow steps. If helpful, information
+about the tubes, such as tube-specific barcodes, can be be recorded in related `Plan` or `Result`
+objects.
 
 Separate models per `Format`, and a unified model with separately incrementing numbers per prefix,
 were considered, but the code complexity of those approaches seems unwarranted. The first model to
@@ -37,14 +44,12 @@ overflow will probably be `Well`. The maximum value for BigAutoField is 92233720
 `Containers` would be supported. If `Well`s are sparsely populated and plates have 384
 or fewer wells, then the limit is a bit higher.
 
-Resource exhaustion is a classic failure mode, but easily tracked and forecasted. TODO: add
-django-healthcheck for AutoField/BigAutoField exhaustion, similar to free disk space.
+Horizontal space for printing barcodes might be more limiting than database integer size. To start
+with, the maximum allowed width is twelve characters: up to four for the string prefix and eight
+for the integer suffix. Additional feedback will help scaling above 99M `Container`s.
 
-### Container Formats
-Containers are defined as sharing the same type if the following are exactly equal:
-* Number of rows
-* Number of columns
-* Code format string
+While resource exhaustion is a common failure mode, it is easy to track and forecast. TODO: extend
+django-healthcheck for AutoField/BigAutoField exhaustion, somewhat similar to free disk space.
 
 #### Future Work
 Plates with double-character (more than 26) rows are not yet supported because of open questions.
