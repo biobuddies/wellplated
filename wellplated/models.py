@@ -1,5 +1,3 @@
-from tkinter.constants import W
-from platformdirs import unix
 from re import compile
 
 from django.contrib.auth.models import User
@@ -8,22 +6,19 @@ from django.db.models import (
     CharField,
     CheckConstraint,
     DateTimeField,
-    F,
     ForeignKey,
     GeneratedField,
     Manager,
     ManyToManyField,
     Model,
-    PositiveIntegerField,
     PositiveSmallIntegerField,
     Q,
     QuerySet,
     TextField,
-    Value,
     UniqueConstraint,
+    Value,
 )
-from django.db.models.functions import Cast, Concat, Length, LPad, Left, StrIndex, Substr
-from django.db.models.lookups import LessThanOrEqual
+from django.db.models.functions import Cast, Concat, Left, Length, LPad, StrIndex, Substr
 from modelcluster.fields import ParentalKey
 from modelcluster.models import ClusterableModel
 from wagtail.admin.panels import FieldPanel, InlinePanel
@@ -40,6 +35,7 @@ class Format(Model):
     """
     Rows, columns, and planned usage
     """
+
     # Rows must range between 'A' and this (inclusive)
     bottom_row = CharField(default='H', editable=False, max_length=1)
     # Columns must range between 1 and this (inclusive)
@@ -96,17 +92,32 @@ class Container(ClusterableModel):
     """
     A Container is uniquely identified by its serial code and has Wells
     """
+
     code = GeneratedField(
         db_persist=True,
         # TODO fix zero padding
-        expression=Concat(Substr('format', StrIndex('format', Value('.')) + Value(1)), LPad(Cast('id', CharField()), Length(Left('format', StrIndex('format', Value('.')))), Value('0'))),
+        expression=Concat(
+            Substr('format', StrIndex('format', Value('.')) + Value(1)),
+            LPad(
+                Cast('id', CharField()),
+                Length(Left('format', StrIndex('format', Value('.')))),
+                Value('0'),
+            ),
+        ),
         editable=False,
         output_field=CharField(max_length=MAX_CODE_LENGTH),
         unique=True,
     )
 
     created_at = DateTimeField(auto_now_add=True)
-    format = ForeignKey(Format, editable=False, null=False, on_delete=PROTECT, related_name='containers', to_field='bottom_right_prefix')
+    format = ForeignKey(
+        Format,
+        editable=False,
+        null=False,
+        on_delete=PROTECT,
+        related_name='containers',
+        to_field='bottom_right_prefix',
+    )
 
     panels = [
         FieldPanel('code', read_only=True),
@@ -114,7 +125,7 @@ class Container(ClusterableModel):
         FieldPanel('format', read_only=True),
         InlinePanel('wells'),
     ]
-    
+
     def __getattr__(self, label: str) -> 'Well':
         # ClusterableModel or other packages need an AttributeError for the following:
         # _cluster_related_objects
@@ -140,9 +151,7 @@ class Container(ClusterableModel):
         if error:
             raise AttributeError(', '.join(error))
 
-        return self.wells.get(
-            label=row + ('{:0%d}' % self.format.pad_column_to).format(column)
-        )
+        return self.wells.get(label=row + ('{:0%d}' % self.format.pad_column_to).format(column))
 
     def __str__(self) -> str:
         return self.code
@@ -156,7 +165,7 @@ class WellManager(Manager):
         # split label row, column and check if in range of container format
         well = super().create(*args, format=format, **kwargs)
         return well
-        
+
     @property
     def start(self) -> 'Well':
         return self.get(container__format__purpose='start', label='A1')
@@ -198,7 +207,6 @@ class Well(Model):
             UniqueConstraint(fields=('container', 'label'), name='unique_container_well_label'),
             # CheckConstraint('label_length', check=Q(label__length=F('container__container_type__bottom_row__'))
         )
-    
 
     def __str__(self) -> str:
         return f'{self.container}.{self.label}'
