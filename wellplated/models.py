@@ -156,6 +156,14 @@ class WellManager(Manager):
         # split label row, column and check if in range of container format
         well = super().create(*args, format=format, **kwargs)
         return well
+        
+    @property
+    def start(self) -> 'Well':
+        return self.get(container__format__purpose='start', label='A1')
+
+    @property
+    def end(self) -> 'Well':
+        return self.get(container__format__purpose='end', label='A1')
 
 
 class Well(Model):
