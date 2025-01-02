@@ -42,6 +42,23 @@ def constrain_format() -> list[migrations.AddConstraint]:
     return constraints
 
 
+def constrain_well() -> list[migrations.AddConstraint]:
+    constraints = []
+    for name, condition in {
+        'minimum-bottom-row-A': Q(bottom_row__gte='A'),
+        'maximum-bottom-row-from-format': Q(bottom_row__lte='P'),
+        'minimum-right-column-1': Q(right_column__gte=1),
+        'maximum-right-column-from-format': Q(right_column__lte=24),
+        'just-one-dot-prefix': Q(prefix__contains='.'),
+    }.items():
+        constraints.append(
+            migrations.AddConstraint(
+                model_name='format', constraint=CheckConstraint(condition=condition, name=name)
+            )
+        )
+    return constraints
+
+
 def create_untracked(apps: state.StateApps, _schema_editor: BaseDatabaseSchemaEditor) -> None:
     # Leave unused low numbers between start and end for customization
     for pk, purpose in {0: 'start', 999: 'end'}.items():

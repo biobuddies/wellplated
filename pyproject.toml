@@ -38,17 +38,24 @@ fixable = ['ALL']
 ignore = [
     'ANN101', # Deprecated and will be removed in a future release
     'COM812', # Insists on join([],) over join([])
+    'D105',   # __str__ does not need a docstring
     'D400',   # Sentence fragments work well, so don't require a period
     'EM101',  # Simple code is more important than simple tracebacks
     'EM102',  # Simple code is more important than simple tracebacks
-    'PT013',  # `import pytest` would be inconsistent with other imports
-    'Q000',   # ruff format will single quote
-    'Q001',   # ruff format will single quote
-    'Q003',   # ruff format will single quote
-    'TD002',  # The git log records who wrote a TODO line
-    'TD004',  # A colon takes up space without really improving readability
-    'TD002',  # The git log records who wrote a TODO line
-    'TRY002', # Forces premature specialization; the right time to subclass is when the exception starts being caught
+    'FIX002', # Trust that if resolving the issue were feasible, the author already would have
+    # Comments de-mystifying "magic values" are great. Turning the comment into a variable
+    # assignment worsens code. It encourages definition far from use, and forces shorter and less
+    # punctuated explanations.
+    'PLR2004',
+    'PT013',   # `import pytest` would be inconsistent with other imports
+    'Q000',    # ruff format will single quote
+    'Q001',    # ruff format will single quote
+    'Q003',    # ruff format will single quote
+    'TD002',   # The git log records who wrote a TODO line
+    'TD003',   # Not planning use issues that heavily
+    'TD004',   # A colon takes up space without really improving readability
+    'TD002',   # The git log records who wrote a TODO line
+    'TRY002',  # Forces premature specialization; the right time to subclass is when the exception starts being caught
 ]
 select = ['ALL']
 
@@ -57,6 +64,9 @@ inline-quotes = 'single'
 
 [tool.ruff.lint.isort]
 split-on-trailing-comma = false
+
+[tool.ruff.lint.per-file-ignores]
+"**/test*.py" = ["S101"]
 
 [tool.ruff.lint.pydocstyle]
 convention = 'numpy' # Pretty arbitrary choice

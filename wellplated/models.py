@@ -205,7 +205,7 @@ class Well(Model):
     class Meta:
         constraints = (
             UniqueConstraint(fields=('container', 'label'), name='unique_container_well_label'),
-            # CheckConstraint('label_length', check=Q(label__length=F('container__container_type__bottom_row__'))
+            # TODO constrain to max row and column from format
         )
 
     def __str__(self) -> str:
