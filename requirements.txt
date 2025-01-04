@@ -6,6 +6,8 @@ asgiref==3.8.1
     # via
     #   django
     #   django-stubs
+asttokens==3.0.0
+    # via stack-data
 beautifulsoup4==4.12.3
     # via wagtail
 build==1.2.2
@@ -22,6 +24,8 @@ coverage==7.6.8
     # via -r requirements.in
 cryptography==43.0.1
     # via secretstorage
+decorator==5.1.1
+    # via ipython
 defusedxml==0.7.1
     # via willow
 distlib==0.3.8
@@ -48,9 +52,9 @@ django-modelcluster==6.3
     # via wagtail
 django-permissionedforms==0.1
     # via wagtail
-django-stubs==5.1.0
+django-stubs==5.1.1
     # via -r requirements.in
-django-stubs-ext==5.1.0
+django-stubs-ext==5.1.1
     # via django-stubs
 django-taggit==5.0.1
     # via wagtail
@@ -64,6 +68,8 @@ draftjs-exporter==5.0.0
     # via wagtail
 et-xmlfile==1.1.0
     # via openpyxl
+executing==2.1.0
+    # via stack-data
 filelock==3.16.1
     # via virtualenv
 filetype==1.2.0
@@ -76,12 +82,16 @@ importlib-metadata==8.5.0
     # via twine
 iniconfig==2.0.0
     # via pytest
+ipython==8.31.0
+    # via -r requirements.in
 jaraco-classes==3.4.0
     # via keyring
 jaraco-context==6.0.1
     # via keyring
 jaraco-functools==4.0.2
     # via keyring
+jedi==0.19.2
+    # via ipython
 jeepney==0.8.0
     # via
     #   keyring
@@ -94,6 +104,8 @@ laces==0.1.1
     # via wagtail
 markdown-it-py==3.0.0
     # via rich
+matplotlib-inline==0.1.7
+    # via ipython
 mdurl==0.1.2
     # via markdown-it-py
 more-itertools==10.5.0
@@ -114,8 +126,12 @@ packaging==24.1
     # via
     #   build
     #   pytest
+parso==0.8.4
+    # via jedi
 pathspec==0.12.1
     # via yamllint
+pexpect==4.9.0
+    # via ipython
 pillow==10.4.0
     # via
     #   pillow-heif
@@ -130,10 +146,17 @@ pluggy==1.5.0
     # via pytest
 pre-commit==3.8.0
     # via -r requirements.in
+prompt-toolkit==3.0.48
+    # via ipython
+ptyprocess==0.7.0
+    # via pexpect
+pure-eval==0.2.3
+    # via stack-data
 pycparser==2.22
     # via cffi
 pygments==2.18.0
     # via
+    #   ipython
     #   readme-renderer
     #   rich
 pyproject-hooks==1.1.0
@@ -178,11 +201,17 @@ soupsieve==2.6
     # via beautifulsoup4
 sqlparse==0.5.1
     # via django
+stack-data==0.6.3
+    # via ipython
 telepath==0.3.1
     # via wagtail
+traitlets==5.14.3
+    # via
+    #   ipython
+    #   matplotlib-inline
 twine==5.1.1
     # via -r requirements.in
-types-pyyaml==6.0.12.20240917
+types-pyyaml==6.0.12.20241230
     # via django-stubs
 typing-extensions==4.12.2
     # via
@@ -199,6 +228,8 @@ virtualenv==20.26.5
     # via pre-commit
 wagtail==6.2.2
     # via -r requirements.in
+wcwidth==0.2.13
+    # via prompt-toolkit
 willow==1.8.0
     # via wagtail
 yamllint==1.35.1

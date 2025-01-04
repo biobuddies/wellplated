@@ -13,6 +13,11 @@ https://docs.djangoproject.com/en/5.1/ref/settings/
 from ast import literal_eval
 from os import getenv
 from pathlib import Path
+from sqlite3 import enable_callback_tracebacks
+
+import django_stubs_ext
+
+django_stubs_ext.monkeypatch()
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -135,6 +140,4 @@ FORMS_URLFIELD_ASSUME_HTTPS = True
 
 SHELL_PLUS_PRINT_SQL_TRUNCATE = None
 
-import sqlite3
-
-sqlite3.enable_callback_tracebacks(True)
+enable_callback_tracebacks(True)  # noqa: FBT003

@@ -1,4 +1,7 @@
+"""Database tables (Models) and columns (Fields) for liquid in plates and tubes"""
+
 from re import compile
+from typing import Self
 
 from django.contrib.auth.models import User
 from django.db.models import (
@@ -18,7 +21,8 @@ from django.db.models import (
     UniqueConstraint,
     Value,
 )
-from django.db.models.functions import Cast, Concat, Left, Length, LPad, StrIndex, Substr
+from django.db.models.functions import Cast, Concat, Length, LPad
+from django_stubs_ext.db.models import TypedModelMeta
 from modelcluster.fields import ParentalKey
 from modelcluster.models import ClusterableModel
 from wagtail.admin.panels import FieldPanel, InlinePanel
@@ -32,21 +36,12 @@ CharField.register_lookup(Length)
 
 @register_snippet
 class Format(Model):
-    """
-    Rows, columns, and planned usage
-    """
+    """Rows, columns, and planned usage"""
 
     # Rows must range between 'A' and this (inclusive)
     bottom_row = CharField(default='H', editable=False, max_length=1)
     # Columns must range between 1 and this (inclusive)
-    right_column = PositiveSmallIntegerField(default=12, editable=False)
-    # Zero padding to ease sorting and tidy displays
-    pad_column_to = GeneratedField(
-        db_persist=True,
-        editable=False,
-        expression=Length(Cast('right_column', CharField())),
-        output_field=PositiveSmallIntegerField(),
-    )
+    right_column = PositiveSmallIntegerField(default=12, editable=False, max_length=2)
 
     prefix = CharField(editable=False, max_length=MAX_CODE_LENGTH - 1)
 
@@ -56,8 +51,12 @@ class Format(Model):
     bottom_right_prefix = GeneratedField(
         db_persist=True,
         editable=False,
-        expression=Concat('bottom_row', 'right_column', Value('.'), 'prefix'),
-        output_field=CharField(max_length=bottom_row.max_length + 3 + prefix.max_length),
+        expression=Concat(
+            'bottom_row', LPad(Cast('right_column', CharField()), 2, Value('0')), 'prefix'
+        ),
+        output_field=CharField(
+            max_length=bottom_row.max_length + right_column.max_length + prefix.max_length
+        ),  # type: ignore[operator]
         unique=True,
     )
 
@@ -66,11 +65,17 @@ class Format(Model):
     # Optimization: variable length fields last
     purpose = TextField(blank=False, unique=True)  # How the contents of wells should be interpreted
 
-    class Meta:
-        # Maximum row character and column number are currently set for 16*24 == 384-well plates.
-        # Up to 26 rows ('Z') and 32767 columns would be easy to support if anyone has a need.
-        # documentation/design.md discusses possibilities for 32*48 == 1536-well plate support.
-        constraints = (
+    containers: Manager['Container']
+
+    class Meta(TypedModelMeta):
+        """
+        Maximum row character and column number are currently set for 16*24 == 384-well plates.
+
+        Up to 26 rows ('Z') and 32767 columns would be easy to support if anyone has a need.
+        documentation/design.md discusses possibilities for 32*48 == 1536-well plate support.
+        """
+
+        constraints = [  # noqa: RUF012
             CheckConstraint(condition=condition, name=name)
             for name, condition in {
                 'single-character-bottom-row': Q(bottom_row__length=1),
@@ -80,8 +85,9 @@ class Format(Model):
                 'maximum-right-column-24': Q(right_column__lte=24),
                 # Dot/period separates Container serial code from Well label
                 'dot-free-prefix': ~Q(prefix__contains='.'),
+                'prefix-length': Q(prefix__length__lte=MAX_CODE_LENGTH - 1),
             }.items()
-        )
+        ]
 
     def __str__(self) -> str:
         return f'{self.bottom_right_prefix}'
@@ -89,28 +95,20 @@ class Format(Model):
 
 @register_snippet
 class Container(ClusterableModel):
-    """
-    A Container is uniquely identified by its serial code and has Wells
-    """
+    """A Container is uniquely identified by its serial code and has Wells"""
 
     code = GeneratedField(
         db_persist=True,
-        # TODO fix zero padding
         expression=Concat(
-            Substr('format', StrIndex('format', Value('.')) + Value(1)),
-            LPad(
-                Cast('id', CharField()),
-                Length(Left('format', StrIndex('format', Value('.')))),
-                Value('0'),
-            ),
+            'format', LPad(Cast('id', CharField()), MAX_CODE_LENGTH - Length('format'), Value('0'))
         ),
         editable=False,
-        output_field=CharField(max_length=MAX_CODE_LENGTH),
+        output_field=CharField(max_length=1 + 2 + MAX_CODE_LENGTH),  # bottom row, right column
         unique=True,
     )
 
-    created_at = DateTimeField(auto_now_add=True)
-    format = ForeignKey(
+    created_at: DateTimeField = DateTimeField(auto_now_add=True)
+    format: ForeignKey[Format] = ForeignKey(
         Format,
         editable=False,
         null=False,
@@ -119,12 +117,14 @@ class Container(ClusterableModel):
         to_field='bottom_right_prefix',
     )
 
-    panels = [
+    panels = (
         FieldPanel('code', read_only=True),
         FieldPanel('created_at', read_only=True),
         FieldPanel('format', read_only=True),
         InlinePanel('wells'),
-    ]
+    )
+
+    wells: Manager['Well']
 
     def __getattr__(self, label: str) -> 'Well':
         # ClusterableModel or other packages need an AttributeError for the following:
@@ -135,7 +135,7 @@ class Container(ClusterableModel):
 
         label_match = LABEL_384.match(label)
         if not label_match or label_match.groupdict().keys() != {'row', 'column'}:
-            raise AttributeError(f'Failed to parse {label}')
+            raise AttributeError(f'Failed to parse {label}')  # noqa: TRY003
         row = label_match.groupdict()['row']
         column = int(label_match.groupdict()['column'], 10)
 
@@ -151,28 +151,28 @@ class Container(ClusterableModel):
         if error:
             raise AttributeError(', '.join(error))
 
-        return self.wells.get(label=row + ('{:0%d}' % self.format.pad_column_to).format(column))
+        return self.wells.get(label=f'{row}{column:02}')
 
     def __str__(self) -> str:
         return self.code
 
 
-class WellManager(Manager):
-    def get_queryset(self) -> QuerySet['Well']:
-        return super().get_queryset().prefetch_related('container')
+class WellManager(Manager['Well']):
+    """Customize Well.objects."""
 
-    def create(self, *args, container: Container, **kwargs) -> 'Well':
-        # split label row, column and check if in range of container format
-        well = super().create(*args, format=format, **kwargs)
-        return well
+    def get_queryset(self) -> QuerySet['Well']:
+        """Optimize."""
+        return super().get_queryset().prefetch_related('container')
 
     @property
     def start(self) -> 'Well':
-        return self.get(container__format__purpose='start', label='A1')
+        """Return the special infinite source well."""
+        return self.get(container__format__purpose='start', label='A01')
 
     @property
     def end(self) -> 'Well':
-        return self.get(container__format__purpose='end', label='A1')
+        """Return the special infinite sink well."""
+        return self.get(container__format__purpose='end', label='A01')
 
 
 class Well(Model):
@@ -189,10 +189,19 @@ class Well(Model):
     384-well plate coordinates range from A01 to P24
     """
 
-    # TODO crush container and label together for natural primary keying?
-    container = ParentalKey(Container, editable=False, on_delete=PROTECT, related_name='wells')
+    container_code = ParentalKey(
+        Container, editable=False, on_delete=PROTECT, related_name='wells', to_field='code'
+    )
     label = CharField(editable=False, max_length=3)
-    sources = ManyToManyField(
+    container_code_label = GeneratedField(
+        db_persist=True,
+        editable=False,
+        expression=Concat('container_code', Value('.'), 'label'),
+        output_field=CharField(max_length=MAX_CODE_LENGTH + 1 + label.max_length),
+        unique=True,
+    )
+
+    sources: ManyToManyField[Self, Self] = ManyToManyField(
         'self',
         through='Transfer',
         through_fields=('source', 'sink'),
@@ -202,14 +211,14 @@ class Well(Model):
 
     objects = WellManager()
 
-    class Meta:
-        constraints = (
-            UniqueConstraint(fields=('container', 'label'), name='unique_container_well_label'),
+    class Meta(TypedModelMeta):
+        constraints = [  # noqa: RUF012
+            UniqueConstraint(fields=('container', 'label'), name='unique_container_well_label')
             # TODO constrain to max row and column from format
-        )
+        ]
 
     def __str__(self) -> str:
-        return f'{self.container}.{self.label}'
+        return f'{self.container_code_label}'
 
 
 @register_snippet

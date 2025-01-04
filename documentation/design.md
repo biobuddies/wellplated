@@ -40,13 +40,13 @@ objects.
 Separate models per `Format`, and a unified model with separately incrementing numbers per prefix,
 were considered, but the code complexity of those approaches seems unwarranted. The first model to
 overflow will probably be `Well`. The maximum value for BigAutoField is 9223372036854775807. If
-`Well`s were fully populated, 9223372036854775807 // 1536 == 6004799503160661 (16 digits)
+`Well`s were fully populated, 9223372036854775807 // 384 == 24019198012642645 (17 digits)
 `Containers` would be supported. If `Well`s are sparsely populated and plates have 384
 or fewer wells, then the limit is a bit higher.
 
 Horizontal space for printing barcodes might be more limiting than database integer size. To start
-with, the maximum allowed width is twelve characters: up to four for the string prefix and eight
-for the integer suffix. Additional feedback will help scaling above 99M `Container`s.
+with, the maximum allowed width is twelve characters. A more end-to-end check would be to generate
+a label and check that everything fits, but wellplated does not yet include label generation.
 
 While resource exhaustion is a common failure mode, it is easy to track and forecast. TODO: extend
 django-healthcheck for AutoField/BigAutoField exhaustion, somewhat similar to free disk space.
@@ -75,8 +75,3 @@ https://shop.gbo.com/en/usa/products/bioscience/microplates/1536-well-microplate
 I'm guessing then that AA1, AB2, ..., HC47, HD48 would describe the diagonal.
 
 Should only one of these be supported? Should both be supported?
-
-
-
-## Separate or Together?
-Should `Container` be a single table, with each row relating to its `ContainerType`? Type-specific Python code could be implemented using the [Proxy Models](https://docs.djangoproject.com/en/5.1/topics/db/models/#proxy-models). Queries selecting every `Container` used in a

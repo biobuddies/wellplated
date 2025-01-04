@@ -12,6 +12,7 @@ yamllint
 
 # Other build or development dependencies
 build
+ipython
 twine
 
 # Run-time dependencies

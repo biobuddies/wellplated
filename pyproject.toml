@@ -25,6 +25,10 @@ django_settings_module = 'demodj.settings'
 [tool.mypy]
 plugins = ['mypy_django_plugin.main']
 
+[[tool.mypy.overrides]]
+module = ['modelcluster.*', 'wagtail.*']
+ignore_missing_imports = true
+
 [tool.ruff]
 line-length = 100
 
@@ -39,9 +43,11 @@ ignore = [
     'ANN101', # Deprecated and will be removed in a future release
     'COM812', # Insists on join([],) over join([])
     'D105',   # __str__ does not need a docstring
+    'D106',   # Nested class Meta does not need a docstring
     'D400',   # Sentence fragments work well, so don't require a period
     'EM101',  # Simple code is more important than simple tracebacks
     'EM102',  # Simple code is more important than simple tracebacks
+    'ISC001', # Silence warning about conflict with ruff formatter
     'FIX002', # Trust that if resolving the issue were feasible, the author already would have
     # Comments de-mystifying "magic values" are great. Turning the comment into a variable
     # assignment worsens code. It encourages definition far from use, and forces shorter and less
@@ -66,7 +72,9 @@ inline-quotes = 'single'
 split-on-trailing-comma = false
 
 [tool.ruff.lint.per-file-ignores]
-"**/test*.py" = ["S101"]
+'**/test*.py' = ['S101']
+'**/__init__.py' = ['D104']
+'wellplated/migrations/*.py' = ['D100', 'D101']
 
 [tool.ruff.lint.pydocstyle]
 convention = 'numpy' # Pretty arbitrary choice

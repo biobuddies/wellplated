@@ -1,3 +1,5 @@
+"""Test the models"""
+
 from typing import TYPE_CHECKING
 
 from django.contrib.auth import get_user_model
@@ -5,14 +7,14 @@ from django.db.utils import IntegrityError
 from pytest import mark, raises
 
 if TYPE_CHECKING:
-    from pytest_mock import MockerFixture  # noqa: TCH004
+    from pytest_mock import MockerFixture
 
-    from wellplated.models import User  # noqa: TCH004
+    from wellplated.models import User
 
 from wellplated.models import Container, Format, Plan, Transfer, Well
 
 
-def get_test_user() -> User:
+def get_test_user() -> 'User':
     """Get or create a test user."""
     user, _ = get_user_model().objects.get_or_create(username='test.user')
     return user
@@ -30,12 +32,12 @@ def test_untracked_data() -> None:
     }
 
     assert set(map(str, Well.objects.filter(container__format__in=formats).order_by('pk'))) == {
-        'start000.A1',
-        'end999.A1',
+        'start000.A01',
+        'end999.A01',
     }
 
-    assert Well.objects.start.label == 'A1'
-    assert Well.objects.end.label == 'A1'
+    assert Well.objects.start.label == 'A01'
+    assert Well.objects.end.label == 'A01'
 
     assert Well.objects.start.container.format.purpose == 'start'
     assert Well.objects.end.container.format.purpose == 'end'
@@ -100,7 +102,7 @@ def test_container_creation() -> None:
 
 
 @mark.django_db
-def test_container_dot_well_label(mocker: MockerFixture) -> None:
+def test_container_dot_well_label(mocker: 'MockerFixture') -> None:
     """Containers must accept dot labels to access wells."""
     wip_tube = Container.objects.create(
         format=Format.objects.create(
