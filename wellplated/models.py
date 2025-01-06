@@ -9,6 +9,7 @@ from django.db.models import (
     CharField,
     CheckConstraint,
     DateTimeField,
+    F,
     ForeignKey,
     GeneratedField,
     Manager,
@@ -21,7 +22,8 @@ from django.db.models import (
     UniqueConstraint,
     Value,
 )
-from django.db.models.functions import Cast, Concat, Length, LPad
+from django.db.models.functions import Cast, Concat, Left, Length, LPad, Replace, Right, Substr
+from django.db.models.lookups import GreaterThanOrEqual, LessThanOrEqual
 from django_stubs_ext.db.models import TypedModelMeta
 from modelcluster.fields import ParentalKey
 from modelcluster.models import ClusterableModel
@@ -32,6 +34,18 @@ LABEL_384 = compile(r'^(?P<row>[A-P])(?P<column>[012]?[0-9])$')
 MAX_CODE_LENGTH = 12  # TODO make this configurable
 
 CharField.register_lookup(Length)
+
+
+format_checks = {
+    'format-bottom-row-exact-length': Q(bottom_row__length=1),
+    'format-bottom-row-minimum': Q(bottom_row__gte='A'),
+    'format-bottom-row-maximum': Q(bottom_row__lte='P'),
+    'format-right-column-minimum': Q(right_column__gte=1),
+    'format-right-column-maximum': Q(right_column__lte=24),
+    # Dot/period separates Container serial code from Well label
+    'format-prefix-no-dots': ~Q(prefix__contains='.'),
+    'format-prefix-maximum-length': Q(prefix__length__lte=11),
+}
 
 
 @register_snippet
@@ -77,16 +91,7 @@ class Format(Model):
 
         constraints = [  # noqa: RUF012
             CheckConstraint(condition=condition, name=name)
-            for name, condition in {
-                'single-character-bottom-row': Q(bottom_row__length=1),
-                'minimum-bottom-row-A': Q(bottom_row__gte='A'),
-                'maximum-bottom-row-P': Q(bottom_row__lte='P'),
-                'minimum-right-column-1': Q(right_column__gte=1),
-                'maximum-right-column-24': Q(right_column__lte=24),
-                # Dot/period separates Container serial code from Well label
-                'dot-free-prefix': ~Q(prefix__contains='.'),
-                'prefix-length': Q(prefix__length__lte=MAX_CODE_LENGTH - 1),
-            }.items()
+            for name, condition in format_checks.items()
         ]
 
     def __str__(self) -> str:
@@ -160,20 +165,34 @@ class Container(ClusterableModel):
 class WellManager(Manager['Well']):
     """Customize Well.objects."""
 
-    def get_queryset(self) -> QuerySet['Well']:
-        """Optimize."""
-        return super().get_queryset().prefetch_related('container')
-
     @property
     def start(self) -> 'Well':
         """Return the special infinite source well."""
-        return self.get(container__format__purpose='start', label='A01')
+        return self.get(container_code_label='A01start0000000.A01')
 
     @property
     def end(self) -> 'Well':
         """Return the special infinite sink well."""
-        return self.get(container__format__purpose='end', label='A01')
+        return self.get(container_code_label='A01end000000999.A01')
 
+
+well_checks = {
+    'well-bottom-row-minimum': GreaterThanOrEqual(Left('label', 1), 'A'),
+    'well-bottom-row-maximum': LessThanOrEqual(Left('label', 1), Left('container', 1)),
+    'well-right-column-minimum': GreaterThanOrEqual(
+        Cast(Right('label', 2), PositiveSmallIntegerField()),
+        1
+    ),
+    'well-maximum-right-column': LessThanOrEqual(
+        Right('label', 2),
+        Cast(Substr('container', 2, 4), PositiveSmallIntegerField())
+    ),
+    'well-contains-one-dot': Q(
+        container_code_label__length=(
+            Length(Replace('container_code_label', Value('.'), Value(''))) + 1
+        )
+    ),
+}
 
 class Well(Model):
     """
@@ -182,22 +201,23 @@ class Well(Model):
     Positions are stored and displayed as "Battleship notation" labels with alphabetical row and
     numerical column, the latter zero-padded for easy sorting and consistent length.
 
-    1-well   tube/trough  coordinate is   A1
-    6-well   plate coordinates range from A1 to B3
-    24-well  plate coordinates range from A1 to D6
+    1-well   tube/trough  coordinate is   A01
+    6-well   plate coordinates range from A01 to B03
+    24-well  plate coordinates range from A01 to D06
     96-well  plate coordinates range from A01 to H12
     384-well plate coordinates range from A01 to P24
     """
 
-    container_code = ParentalKey(
-        Container, editable=False, on_delete=PROTECT, related_name='wells', to_field='code'
+    container = ParentalKey(
+        Container, db_column='container_code', editable=False, on_delete=PROTECT, related_name='wells', to_field='code'
     )
     label = CharField(editable=False, max_length=3)
     container_code_label = GeneratedField(
         db_persist=True,
         editable=False,
-        expression=Concat('container_code', Value('.'), 'label'),
-        output_field=CharField(max_length=MAX_CODE_LENGTH + 1 + label.max_length),
+        expression=Concat('container', Value('.'), 'label'),
+        # format bottom row, format right column, code, dot, label row, label column
+        output_field=CharField(max_length=1 + 2 + MAX_CODE_LENGTH + 1 + 1 + 2),
         unique=True,
     )
 
@@ -213,8 +233,8 @@ class Well(Model):
 
     class Meta(TypedModelMeta):
         constraints = [  # noqa: RUF012
-            UniqueConstraint(fields=('container', 'label'), name='unique_container_well_label')
-            # TODO constrain to max row and column from format
+            CheckConstraint(condition=condition, name=name)
+            for name, condition in well_checks.items()
         ]
 
     def __str__(self) -> str:

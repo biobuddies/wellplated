@@ -23,18 +23,11 @@ def get_test_user() -> 'User':
 @mark.django_db
 def test_untracked_data() -> None:
     """Initial data for start and end of tracking must exist as expected."""
-    formats = Format.objects.filter(purpose__in=('start', 'end')).order_by('pk')
-    assert set(formats.values_list('prefix', flat=True)) == {'start', 'end'}
+    assert Format.objects.filter(purpose__in=('start', 'end')).count() == 2
 
-    assert set(Container.objects.filter(format__in=formats).values_list('code', flat=True)) == {
-        'start000',
-        'end999',
-    }
+    assert Container.objects.filter(code__in=('A01start0000000', 'A01end000000999')).count() == 2
 
-    assert set(map(str, Well.objects.filter(container__format__in=formats).order_by('pk'))) == {
-        'start000.A01',
-        'end999.A01',
-    }
+    assert Well.objects.filter(container_code_label__in=('A01start0000000.A01', 'A01end000000999.A01')).count() == 2
 
     assert Well.objects.start.label == 'A01'
     assert Well.objects.end.label == 'A01'
@@ -97,6 +90,7 @@ def test_container_creation() -> None:
     final_tube = Format.objects.create(prefix='f', purpose='final-tube')
     first_new_container_pk = Container.objects.create(format=final_tube).pk
     final_tube.containers.add(Container(format=final_tube), bulk=False)
+    final_tube.containers.commit()
     Container.objects.bulk_create([Container(format=final_tube)])
     assert Container.objects.filter(format=final_tube).latest('pk').pk - first_new_container_pk == 2
 

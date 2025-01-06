@@ -7,18 +7,18 @@ Possible synonyms:
 * Label
 * Position
 
-## From
+## Source
 Possible synonyms:
 * Fro (in Python code where `from` is a reserved keyword used with `import`)
+* From
 * Origin
 * Parent
-* Source
 
-## To
+## Sink
 Possible synonyms:
 * Child
 * Destination
-* Sink
+* To
 
 ## Split
 Possible synonyms:

@@ -20,45 +20,55 @@ from django.db.models import (
     Value,
 )
 from django.db.models.deletion import PROTECT
-from django.db.models.functions import Cast, Concat, Left, Length, LPad, StrIndex, Substr
+from django.db.models.functions import Cast, Concat, Length, Left, LPad, Replace, Right, Substr
+from django.db.models.lookups import GreaterThanOrEqual, LessThanOrEqual
 from modelcluster.fields import ParentalKey
 
 
-def constrain_format() -> list[migrations.AddConstraint]:
-    """Forbid nonsense at the database level"""
-    constraints = []
-    for name, condition in {
-        'single-character-bottom-row': Q(bottom_row__length=1),
-        'minimum-bottom-row-A': Q(bottom_row__gte='A'),
-        'maximum-bottom-row-P': Q(bottom_row__lte='P'),
-        'minimum-right-column-1': Q(right_column__gte=1),
-        'maximum-right-column-24': Q(right_column__lte=24),
-        'dot-free-prefix': ~Q(prefix__contains='.'),
-    }.items():
-        constraints.append(
-            migrations.AddConstraint(
-                model_name='format', constraint=CheckConstraint(condition=condition, name=name)
-            )
-        )
-    return constraints
+format_checks = {
+    'format-bottom-row-exact-length': Q(bottom_row__length=1),
+    'format-bottom-row-minimum': Q(bottom_row__gte='A'),
+    'format-bottom-row-maximum': Q(bottom_row__lte='P'),
+    'format-right-column-minimum': Q(right_column__gte=1),
+    'format-right-column-maximum': Q(right_column__lte=24),
+    # Dot/period separates Container serial code from Well label
+    'format-prefix-no-dots': ~Q(prefix__contains='.'),
+    'format-prefix-maximum-length': Q(prefix__length__lte=11),
+}
 
 
-def constrain_well() -> list[migrations.AddConstraint]:
-    """Forbid nonsense at the database level"""
-    constraints = []
-    for name, condition in {
-        'minimum-bottom-row-A': Q(bottom_row__gte='A'),
-        'maximum-bottom-row-from-format': Q(bottom_row__lte='P'),
-        'minimum-right-column-1': Q(right_column__gte=1),
-        'maximum-right-column-from-format': Q(right_column__lte=24),
-        'just-one-dot-prefix': Q(prefix__contains='.'),
-    }.items():
-        constraints.append(
-            migrations.AddConstraint(
-                model_name='format', constraint=CheckConstraint(condition=condition, name=name)
-            )
+well_checks = {
+    'well-bottom-row-minimum': GreaterThanOrEqual(Left('label', 1), 'A'),
+    'well-bottom-row-maximum': LessThanOrEqual(Left('label', 1), Left('container', 1)),
+    'well-right-column-minimum': GreaterThanOrEqual(
+        Cast(Right('label', 2), PositiveSmallIntegerField()),
+        1
+    ),
+    'well-maximum-right-column': LessThanOrEqual(
+        Right('label', 2),
+        Cast(Substr('container', 2, 4), PositiveSmallIntegerField())
+    ),
+    'well-contains-one-dot': Q(
+        container_code_label__length=(
+            Length(Replace('container_code_label', Value('.'), Value(''))) + 1
         )
-    return constraints
+    ),
+}
+
+
+def constrain_models() -> list[migrations.AddConstraint]:
+    """Forbid out-of-bounds at the database level"""
+    return [
+        migrations.AddConstraint(
+            constraint=CheckConstraint(condition=condition, name=name),
+            model_name='format',
+        ) for name, condition in format_checks.items()
+    ] + [
+        migrations.AddConstraint(
+            constraint=CheckConstraint(condition=condition, name=name),
+            model_name='well',
+        ) for name, condition in well_checks.items()
+    ]
 
 
 def create_untracked(apps: state.StateApps, _schema_editor: BaseDatabaseSchemaEditor) -> None:
@@ -99,15 +109,6 @@ class Migration(migrations.Migration):
                     'right_column',
                     PositiveSmallIntegerField(default=12, editable=False, max_length=2),
                 ),
-                (
-                    'pad_column_to',
-                    GeneratedField(
-                        db_persist=True,
-                        editable=False,
-                        expression=Length(Cast('right_column', CharField())),
-                        output_field=PositiveSmallIntegerField(),
-                    ),
-                ),
                 ('prefix', CharField(editable=False, max_length=11)),
                 (
                     'bottom_right_prefix',
@@ -118,7 +119,7 @@ class Migration(migrations.Migration):
                             LPad(Cast('right_column', CharField()), 2, Value('0')),
                             'prefix',
                         ),
-                        output_field=CharField(max_length=1 + 2 + 11),
+                        output_field=CharField(max_length=1 + 2 + 11),  # bottom row, right column, prefix
                         unique=True,
                     ),
                 ),
@@ -126,7 +127,6 @@ class Migration(migrations.Migration):
                 ('purpose', TextField(unique=True)),
             ],
         ),
-        *constrain_format(),
         migrations.CreateModel(
             name='Container',
             fields=[
@@ -141,15 +141,13 @@ class Migration(migrations.Migration):
                     GeneratedField(
                         db_persist=True,
                         expression=Concat(
-                            Substr('format', StrIndex('format', Value('.')) + Value(1)),
-                            LPad(
-                                Cast('id', CharField()),
-                                Length(Left('format', StrIndex('format', Value('.')))),
-                                Value('0'),
-                            ),
+                            'format',
+                            # bottom row, right column, prefix + id
+                            LPad(Cast('id', CharField()), 1 + 2 + 12 - Length('format'), Value('0')),
                         ),
                         editable=False,
-                        output_field=CharField(max_length=12),
+                        # bottom row, right column, prefix + id
+                        output_field=CharField(max_length=1 + 2 + 12),
                         unique=True,
                     ),
                 ),
@@ -179,21 +177,29 @@ class Migration(migrations.Migration):
                 (
                     'container',
                     ParentalKey(
+                        db_column='container_code',
                         editable=False,
                         on_delete=PROTECT,
                         related_name='wells',
                         to='wellplated.container',
+                        to_field='code',
                     ),
                 ),
                 ('label', CharField(editable=False, max_length=3)),
+                (
+                    'container_code_label',
+                    GeneratedField(
+                        db_persist=True,
+                        editable=False,
+                        expression=Concat('container', Value('.'), 'label'),
+                        # bottom row, right column, prefix + id, dot, row, column
+                        output_field=CharField(max_length=1 + 2 + 12 + 1 + 1 + 2),
+                        unique=True,
+                    ),
+                ),
             ],
         ),
-        migrations.AddConstraint(
-            model_name='well',
-            constraint=UniqueConstraint(
-                fields=('container', 'label'), name='unique_container_well_label'
-            ),
-        ),
+        *constrain_models(),
         migrations.RunPython(create_untracked, migrations.RunPython.noop),
         migrations.CreateModel(
             name='Plan',
