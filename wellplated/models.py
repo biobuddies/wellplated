@@ -2,7 +2,6 @@
 
 from re import compile
 from typing import Self
-from warnings import catch_warnings, filterwarnings
 
 from django.contrib.auth.models import User
 from django.db.models import (
@@ -10,7 +9,6 @@ from django.db.models import (
     CharField,
     CheckConstraint,
     DateTimeField,
-    F,
     ForeignKey,
     GeneratedField,
     Manager,
@@ -18,9 +16,7 @@ from django.db.models import (
     Model,
     PositiveSmallIntegerField,
     Q,
-    QuerySet,
     TextField,
-    UniqueConstraint,
     Value,
 )
 from django.db.models.functions import Cast, Concat, Left, Length, LPad, Replace, Right, Substr
@@ -183,12 +179,10 @@ well_checks = {
     'well-bottom-row-gte-A': GreaterThanOrEqual(Left('label', 1), 'A'),
     'well-bottom-row-lte-format-max': LessThanOrEqual(Left('label', 1), Left('container', 1)),
     'well-right-column-gte-1': GreaterThanOrEqual(
-        Cast(Right('label', 2), PositiveSmallIntegerField()),
-        1
+        Cast(Right('label', 2), PositiveSmallIntegerField()), 1
     ),
     'well-right-column-lte-format-max': LessThanOrEqual(
-        Right('label', 2),
-        Cast(Substr('container', 2, 4), PositiveSmallIntegerField())
+        Right('label', 2), Cast(Substr('container', 2, 4), PositiveSmallIntegerField())
     ),
     'well-container-code-label-length-19': Q(
         # dot, label row, label column
@@ -200,6 +194,7 @@ well_checks = {
         )
     ),
 }
+
 
 class Well(Model):
     """
@@ -216,7 +211,12 @@ class Well(Model):
     """
 
     container = ParentalKey(
-        Container, db_column='container_code', editable=False, on_delete=PROTECT, related_name='wells', to_field='code'
+        Container,
+        db_column='container_code',
+        editable=False,
+        on_delete=PROTECT,
+        related_name='wells',
+        to_field='code',
     )
     label = CharField(editable=False, max_length=3)
     container_code_label = GeneratedField(

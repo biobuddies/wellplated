@@ -16,11 +16,10 @@ from django.db.models import (
     PositiveSmallIntegerField,
     Q,
     TextField,
-    UniqueConstraint,
     Value,
 )
 from django.db.models.deletion import PROTECT
-from django.db.models.functions import Cast, Concat, Length, Left, LPad, Replace, Right, Substr
+from django.db.models.functions import Cast, Concat, Left, Length, LPad, Replace, Right, Substr
 from django.db.models.lookups import GreaterThanOrEqual, LessThanOrEqual
 from modelcluster.fields import ParentalKey
 
@@ -45,12 +44,10 @@ well_checks = {
     'well-bottom-row-gte-A': GreaterThanOrEqual(Left('label', 1), 'A'),
     'well-bottom-row-lte-format-max': LessThanOrEqual(Left('label', 1), Left('container', 1)),
     'well-right-column-gte-1': GreaterThanOrEqual(
-        Cast(Right('label', 2), PositiveSmallIntegerField()),
-        1
+        Cast(Right('label', 2), PositiveSmallIntegerField()), 1
     ),
     'well-right-column-lte-format-max': LessThanOrEqual(
-        Right('label', 2),
-        Cast(Substr('container', 2, 4), PositiveSmallIntegerField())
+        Right('label', 2), Cast(Substr('container', 2, 4), PositiveSmallIntegerField())
     ),
     'well-container-code-label-length-19': Q(
         # container code, dot, label row, label column
@@ -68,14 +65,14 @@ def constrain_models() -> list[migrations.AddConstraint]:
     """Forbid out-of-bounds at the database level"""
     return [
         migrations.AddConstraint(
-            constraint=CheckConstraint(condition=condition, name=name),
-            model_name='format',
-        ) for name, condition in format_checks.items()
+            constraint=CheckConstraint(condition=condition, name=name), model_name='format'
+        )
+        for name, condition in format_checks.items()
     ] + [
         migrations.AddConstraint(
-            constraint=CheckConstraint(condition=condition, name=name),
-            model_name='well',
-        ) for name, condition in well_checks.items()
+            constraint=CheckConstraint(condition=condition, name=name), model_name='well'
+        )
+        for name, condition in well_checks.items()
     ]
 
 
@@ -151,7 +148,11 @@ class Migration(migrations.Migration):
                         db_persist=True,
                         expression=Concat(
                             'format',
-                            LPad(Cast('id', CharField()), Value(CONTAINER_CODE_LENGTH) - Length('format'), Value('0')),
+                            LPad(
+                                Cast('id', CharField()),
+                                Value(CONTAINER_CODE_LENGTH) - Length('format'),
+                                Value('0'),
+                            ),
                         ),
                         editable=False,
                         output_field=CharField(max_length=CONTAINER_CODE_LENGTH),

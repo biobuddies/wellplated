@@ -1,10 +1,10 @@
 """Test the models"""
 
-from typing import Any, TYPE_CHECKING
+from typing import TYPE_CHECKING
 
 from django.contrib.auth import get_user_model
 from django.db.utils import IntegrityError
-from pytest import fixture, mark, raises
+from pytest import mark, raises
 
 if TYPE_CHECKING:
     from pytest_mock import MockerFixture
@@ -26,7 +26,12 @@ def test_untracked_data() -> None:
 
     assert Container.objects.filter(code__in=('A01start0000000', 'A01end000000999')).count() == 2
 
-    assert Well.objects.filter(container_code_label__in=('A01start0000000.A01', 'A01end000000999.A01')).count() == 2
+    assert (
+        Well.objects.filter(
+            container_code_label__in=('A01start0000000.A01', 'A01end000000999.A01')
+        ).count()
+        == 2
+    )
 
     assert Well.objects.start.label == 'A01'
     assert Well.objects.end.label == 'A01'
@@ -109,6 +114,7 @@ def test_container_dot_well_label(mocker: 'MockerFixture') -> None:
         mocker.call.get(label='P24'),
     ]
 
+
 @mark.django_db
 @mark.parametrize(
     ('bottom_row', 'right_column'),
@@ -118,9 +124,12 @@ def test_well_creation_range(bottom_row: int, right_column: str) -> None:
     """Wells must stay in range."""
     with raises(IntegrityError):
         Well.objects.create(
-            container=Container.objects.create(format=Format.objects.create(prefix='pl', purpose='plate')),
-            label=f'{bottom_row}{right_column:02}'
+            container=Container.objects.create(
+                format=Format.objects.create(prefix='pl', purpose='plate')
+            ),
+            label=f'{bottom_row}{right_column:02}',
         )
+
 
 @mark.django_db
 def test_overlapping_well_creation() -> None:
@@ -129,6 +138,7 @@ def test_overlapping_well_creation() -> None:
     Well.objects.create(container=plate, label='A01')
     with raises(IntegrityError):
         Well.objects.create(container=plate, label='A01')
+
 
 @mark.django_db
 def test_plan_and_transfers() -> None:
