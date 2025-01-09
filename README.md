@@ -4,9 +4,12 @@ Python Django models for liquid in plates and tubes
 
 For planning what should happen, with strong constraints, and tracking what actually happened.
 
-## TODO
+## Features
 * Well-in-range database constraints
-* Pre-barcoded containers (externally generated codes)
+* Support for generating internal barcodes and recording externally generated barcodes
+  (pre-barcoded tubes and plates)
+
+## TODO
 * JSONField constraints for [OR Tools](https://developers.google.com/optimization/cp/cp_example) to
   check or optimize. start and end purpose formats will be special cases allowing infinite
   volume out and in.
@@ -32,3 +35,4 @@ For planning what should happen, with strong constraints, and tracking what actu
     * Zero or one `Start`?
     * Zero or more `Update`s?
     * Zero or one `Result`?
+* Where should volume constraints be recorded? Enforced?

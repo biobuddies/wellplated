@@ -88,7 +88,6 @@ def test_container_code_uniqueness() -> None:
 @mark.django_db
 def test_container_creation() -> None:
     """All ways of creating Container must work."""
-    # TODO revise for internal/external codes
     final_tube = Format.objects.create(prefix='f', purpose='final-tube')
     first_new_container_pk = Container.objects.create(format=final_tube).pk
     final_tube.containers.add(Container(format=final_tube), bulk=False)
