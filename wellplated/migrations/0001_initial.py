@@ -23,8 +23,6 @@ from django.db.models.functions import Cast, Concat, Left, Length, LPad, Replace
 from django.db.models.lookups import GreaterThanOrEqual, LessThanOrEqual
 from modelcluster.fields import ParentalKey
 
-from wellplated.models import PREFIX_ID_LENGTH
-
 PREFIX_ID_LENGTH = 12
 CONTAINER_CODE_LENGTH = 1 + 2 + PREFIX_ID_LENGTH  # bottom row, right column
 
