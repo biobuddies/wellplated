@@ -1,5 +1,7 @@
 # shellcheck shell=bash
 
+[ 'a' ] && echo hi
+
 [[ $BASH ]] || cat <<EOD
 WARNING: includes.sh has only been tested with, and linted for, Bash. You are running $0.
 Run \`chsh -s /bin/bash\` or \`forceready\` to switch.

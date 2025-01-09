@@ -24,31 +24,39 @@ from django.db.models.functions import Cast, Concat, Length, Left, LPad, Replace
 from django.db.models.lookups import GreaterThanOrEqual, LessThanOrEqual
 from modelcluster.fields import ParentalKey
 
+from wellplated.models import PREFIX_ID_LENGTH
+
+PREFIX_ID_LENGTH = 12
+CONTAINER_CODE_LENGTH = 1 + 2 + PREFIX_ID_LENGTH  # bottom row, right column
+
 
 format_checks = {
-    'format-bottom-row-exact-length': Q(bottom_row__length=1),
-    'format-bottom-row-minimum': Q(bottom_row__gte='A'),
-    'format-bottom-row-maximum': Q(bottom_row__lte='P'),
-    'format-right-column-minimum': Q(right_column__gte=1),
-    'format-right-column-maximum': Q(right_column__lte=24),
+    'format-bottom-row-length-1': Q(bottom_row__length=1),
+    'format-bottom-row-gte-A': Q(bottom_row__gte='A'),
+    'format-bottom-row-lte-P': Q(bottom_row__lte='P'),
+    'format-right-column-gte-1': Q(right_column__gte=1),
+    'format-right-column-lte-24': Q(right_column__lte=24),
     # Dot/period separates Container serial code from Well label
-    'format-prefix-no-dots': ~Q(prefix__contains='.'),
-    'format-prefix-maximum-length': Q(prefix__length__lte=11),
+    'format-prefix-no-dot': ~Q(prefix__contains='.'),
+    'format-prefix-length-lte-11': Q(prefix__length__lte=PREFIX_ID_LENGTH - 1),
 }
 
-
 well_checks = {
-    'well-bottom-row-minimum': GreaterThanOrEqual(Left('label', 1), 'A'),
-    'well-bottom-row-maximum': LessThanOrEqual(Left('label', 1), Left('container', 1)),
-    'well-right-column-minimum': GreaterThanOrEqual(
+    'well-bottom-row-gte-A': GreaterThanOrEqual(Left('label', 1), 'A'),
+    'well-bottom-row-lte-format-max': LessThanOrEqual(Left('label', 1), Left('container', 1)),
+    'well-right-column-gte-1': GreaterThanOrEqual(
         Cast(Right('label', 2), PositiveSmallIntegerField()),
         1
     ),
-    'well-maximum-right-column': LessThanOrEqual(
+    'well-right-column-lte-format-max': LessThanOrEqual(
         Right('label', 2),
         Cast(Substr('container', 2, 4), PositiveSmallIntegerField())
     ),
-    'well-contains-one-dot': Q(
+    'well-container-code-label-length-19': Q(
+        # container code, dot, label row, label column
+        container_code_label__length=CONTAINER_CODE_LENGTH + 1 + 1 + 2
+    ),
+    'well-container-code-label-has-1-dot': Q(
         container_code_label__length=(
             Length(Replace('container_code_label', Value('.'), Value(''))) + 1
         )
@@ -109,7 +117,7 @@ class Migration(migrations.Migration):
                     'right_column',
                     PositiveSmallIntegerField(default=12, editable=False, max_length=2),
                 ),
-                ('prefix', CharField(editable=False, max_length=11)),
+                ('prefix', CharField(editable=False, max_length=PREFIX_ID_LENGTH - 1)),
                 (
                     'bottom_right_prefix',
                     GeneratedField(
@@ -119,7 +127,8 @@ class Migration(migrations.Migration):
                             LPad(Cast('right_column', CharField()), 2, Value('0')),
                             'prefix',
                         ),
-                        output_field=CharField(max_length=1 + 2 + 11),  # bottom row, right column, prefix
+                        # bottom row, right column
+                        output_field=CharField(max_length=1 + 2 + PREFIX_ID_LENGTH - 1),
                         unique=True,
                     ),
                 ),
@@ -142,12 +151,10 @@ class Migration(migrations.Migration):
                         db_persist=True,
                         expression=Concat(
                             'format',
-                            # bottom row, right column, prefix + id
-                            LPad(Cast('id', CharField()), 1 + 2 + 12 - Length('format'), Value('0')),
+                            LPad(Cast('id', CharField()), Value(CONTAINER_CODE_LENGTH) - Length('format'), Value('0')),
                         ),
                         editable=False,
-                        # bottom row, right column, prefix + id
-                        output_field=CharField(max_length=1 + 2 + 12),
+                        output_field=CharField(max_length=CONTAINER_CODE_LENGTH),
                         unique=True,
                     ),
                 ),
@@ -192,8 +199,8 @@ class Migration(migrations.Migration):
                         db_persist=True,
                         editable=False,
                         expression=Concat('container', Value('.'), 'label'),
-                        # bottom row, right column, prefix + id, dot, row, column
-                        output_field=CharField(max_length=1 + 2 + 12 + 1 + 1 + 2),
+                        # dot, row, column
+                        output_field=CharField(max_length=CONTAINER_CODE_LENGTH + 1 + 1 + 2),
                         unique=True,
                     ),
                 ),
@@ -238,9 +245,9 @@ class Migration(migrations.Migration):
         ),
         migrations.AddField(
             model_name='well',
-            name='sources',
+            name='sinks',
             field=ManyToManyField(
-                related_name='sinks', through='wellplated.Transfer', to='wellplated.well'
+                related_name='sources', through='wellplated.Transfer', to='wellplated.well'
             ),
         ),
     )

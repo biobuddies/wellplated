@@ -29,6 +29,11 @@ plugins = ['mypy_django_plugin.main']
 module = ['modelcluster.*', 'wagtail.*']
 ignore_missing_imports = true
 
+[tool.pytest.ini_options]
+DJANGO_SETTINGS_MODULE = 'demodj.settings'
+django_debug_mode = 'keep'
+python_files = ['tests.py', 'test_*.py']
+
 [tool.ruff]
 line-length = 100
 
@@ -78,10 +83,6 @@ split-on-trailing-comma = false
 
 [tool.ruff.lint.pydocstyle]
 convention = 'numpy' # Pretty arbitrary choice
-
-[tool.pytest.ini_options]
-DJANGO_SETTINGS_MODULE = 'demodj.settings'
-python_files = ['tests.py', 'test_*.py']
 
 [tool.setuptools]
 packages = ['wellplated']

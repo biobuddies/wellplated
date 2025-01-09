@@ -2,6 +2,7 @@
 
 from re import compile
 from typing import Self
+from warnings import catch_warnings, filterwarnings
 
 from django.contrib.auth.models import User
 from django.db.models import (
@@ -31,20 +32,21 @@ from wagtail.admin.panels import FieldPanel, InlinePanel
 from wagtail.snippets.models import register_snippet
 
 LABEL_384 = compile(r'^(?P<row>[A-P])(?P<column>[012]?[0-9])$')
-MAX_CODE_LENGTH = 12  # TODO make this configurable
+PREFIX_ID_LENGTH = 12  # TODO make this configurable
+CONTAINER_CODE_LENGTH = 1 + 2 + PREFIX_ID_LENGTH  # bottom row, right column
 
 CharField.register_lookup(Length)
 
 
 format_checks = {
-    'format-bottom-row-exact-length': Q(bottom_row__length=1),
-    'format-bottom-row-minimum': Q(bottom_row__gte='A'),
-    'format-bottom-row-maximum': Q(bottom_row__lte='P'),
-    'format-right-column-minimum': Q(right_column__gte=1),
-    'format-right-column-maximum': Q(right_column__lte=24),
+    'format-bottom-row-length-1': Q(bottom_row__length=1),
+    'format-bottom-row-gte-A': Q(bottom_row__gte='A'),
+    'format-bottom-row-lte-P': Q(bottom_row__lte='P'),
+    'format-right-column-gte-1': Q(right_column__gte=1),
+    'format-right-column-lte-24': Q(right_column__lte=24),
     # Dot/period separates Container serial code from Well label
-    'format-prefix-no-dots': ~Q(prefix__contains='.'),
-    'format-prefix-maximum-length': Q(prefix__length__lte=11),
+    'format-prefix-no-dot': ~Q(prefix__contains='.'),
+    'format-prefix-length-lte-11': Q(prefix__length__lte=PREFIX_ID_LENGTH - 1),
 }
 
 
@@ -52,12 +54,12 @@ format_checks = {
 class Format(Model):
     """Rows, columns, and planned usage"""
 
-    # Rows must range between 'A' and this (inclusive)
+    # Rows must range between 'A' and this (inclusive); default to 96-well plate
     bottom_row = CharField(default='H', editable=False, max_length=1)
-    # Columns must range between 1 and this (inclusive)
+    # Columns must range between 1 and this (inclusive); default to 96-well plate
     right_column = PositiveSmallIntegerField(default=12, editable=False, max_length=2)
 
-    prefix = CharField(editable=False, max_length=MAX_CODE_LENGTH - 1)
+    prefix = CharField(editable=False, max_length=PREFIX_ID_LENGTH - 1)
 
     # GeneratedFields cannot be primary keys, but ForeignKey can reference any unique field.
     # So pack the maximum row, maximum column, and prefix together so Container can use them
@@ -69,8 +71,8 @@ class Format(Model):
             'bottom_row', LPad(Cast('right_column', CharField()), 2, Value('0')), 'prefix'
         ),
         output_field=CharField(
-            max_length=bottom_row.max_length + right_column.max_length + prefix.max_length
-        ),  # type: ignore[operator]
+            max_length=bottom_row.max_length + right_column.max_length + prefix.max_length  # type: ignore[operator]
+        ),
         unique=True,
     )
 
@@ -105,10 +107,11 @@ class Container(ClusterableModel):
     code = GeneratedField(
         db_persist=True,
         expression=Concat(
-            'format', LPad(Cast('id', CharField()), MAX_CODE_LENGTH - Length('format'), Value('0'))
+            'format',
+            LPad(Cast('id', CharField()), CONTAINER_CODE_LENGTH - Length('format'), Value('0')),
         ),
         editable=False,
-        output_field=CharField(max_length=1 + 2 + MAX_CODE_LENGTH),  # bottom row, right column
+        output_field=CharField(max_length=CONTAINER_CODE_LENGTH),
         unique=True,
     )
 
@@ -177,17 +180,21 @@ class WellManager(Manager['Well']):
 
 
 well_checks = {
-    'well-bottom-row-minimum': GreaterThanOrEqual(Left('label', 1), 'A'),
-    'well-bottom-row-maximum': LessThanOrEqual(Left('label', 1), Left('container', 1)),
-    'well-right-column-minimum': GreaterThanOrEqual(
+    'well-bottom-row-gte-A': GreaterThanOrEqual(Left('label', 1), 'A'),
+    'well-bottom-row-lte-format-max': LessThanOrEqual(Left('label', 1), Left('container', 1)),
+    'well-right-column-gte-1': GreaterThanOrEqual(
         Cast(Right('label', 2), PositiveSmallIntegerField()),
         1
     ),
-    'well-maximum-right-column': LessThanOrEqual(
+    'well-right-column-lte-format-max': LessThanOrEqual(
         Right('label', 2),
         Cast(Substr('container', 2, 4), PositiveSmallIntegerField())
     ),
-    'well-contains-one-dot': Q(
+    'well-container-code-label-length-19': Q(
+        # dot, label row, label column
+        container_code_label__length=CONTAINER_CODE_LENGTH + 1 + 1 + 2
+    ),
+    'well-container-code-label-has-1-dot': Q(
         container_code_label__length=(
             Length(Replace('container_code_label', Value('.'), Value(''))) + 1
         )
@@ -216,17 +223,17 @@ class Well(Model):
         db_persist=True,
         editable=False,
         expression=Concat('container', Value('.'), 'label'),
-        # format bottom row, format right column, code, dot, label row, label column
-        output_field=CharField(max_length=1 + 2 + MAX_CODE_LENGTH + 1 + 1 + 2),
+        # dot, label row, label column
+        output_field=CharField(max_length=CONTAINER_CODE_LENGTH + 1 + 1 + 2),
         unique=True,
     )
 
-    sources: ManyToManyField[Self, Self] = ManyToManyField(
+    sinks: ManyToManyField[Self, Self] = ManyToManyField(
         'self',
         through='Transfer',
         through_fields=('source', 'sink'),
         symmetrical=False,
-        related_name='sinks',
+        related_name='sources',
     )
 
     objects = WellManager()
