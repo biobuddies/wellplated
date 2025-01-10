@@ -19,7 +19,17 @@ from django.db.models import (
     TextField,
     Value,
 )
-from django.db.models.functions import Cast, Concat, Left, Length, LPad, Replace, Right, Substr
+from django.db.models.functions import (
+    Cast,
+    Coalesce,
+    Concat,
+    Left,
+    Length,
+    LPad,
+    Replace,
+    Right,
+    Substr,
+)
 from django.db.models.lookups import GreaterThanOrEqual, LessThanOrEqual
 from django_stubs_ext.db.models import TypedModelMeta
 from modelcluster.fields import ParentalKey
@@ -100,11 +110,16 @@ class Format(Model):
 class Container(ClusterableModel):
     """A Container is uniquely identified by its serial code and has Wells"""
 
+    external_id = PositiveSmallIntegerField(blank=True, default=None, editable=False, null=True)
     code = GeneratedField(
         db_persist=True,
         expression=Concat(
             'format',
-            LPad(Cast('id', CharField()), CONTAINER_CODE_LENGTH - Length('format'), Value('0')),
+            LPad(
+                Cast(Coalesce('external_id', 'id'), CharField()),
+                CONTAINER_CODE_LENGTH - Length('format'),
+                Value('0'),
+            ),
         ),
         editable=False,
         output_field=CharField(max_length=CONTAINER_CODE_LENGTH),
