@@ -21,7 +21,7 @@ cfgv==3.4.0
 charset-normalizer==3.3.2
     # via requests
 coverage==7.6.8
-    # via -r requirements.in
+    # via pytest-cov
 cryptography==43.0.1
     # via secretstorage
 decorator==5.1.1
@@ -164,8 +164,11 @@ pyproject-hooks==1.1.0
 pytest==8.3.3
     # via
     #   -r requirements.in
+    #   pytest-cov
     #   pytest-django
     #   pytest-mock
+pytest-cov==6.0.0
+    # via -r requirements.in
 pytest-django==4.9.0
     # via -r requirements.in
 pytest-mock==3.14.0

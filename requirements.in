@@ -1,9 +1,9 @@
 # Pre-commit
-coverage
 django-stubs
 mypy
 pre-commit
 pytest
+pytest-cov
 pytest-django
 pytest-mock
 ruff
