@@ -105,16 +105,10 @@ class Format(Model):
         return f'{self.bottom_right_prefix}'
 
 
-@register('register_icons')
-def register_icons(icons):
-    return icons + ['braille.svg']
-
-
 class FormatViewSet(SnippetViewSet):
     """Customize /manage/snippets interface"""
 
     model = Format
-    icon = 'braille'
     list_display = ('bottom_right_prefix', 'purpose', 'bottom_row', 'right_column', 'prefix')
 
 
