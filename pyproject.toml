@@ -65,7 +65,6 @@ ignore = [
     'TD002',   # The git log records who wrote a TODO line
     'TD003',   # Not planning use issues that heavily
     'TD004',   # A colon takes up space without really improving readability
-    'TD002',   # The git log records who wrote a TODO line
     'TRY002',  # Forces premature specialization; the right time to subclass is when the exception starts being caught
 ]
 select = ['ALL']
