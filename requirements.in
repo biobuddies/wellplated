@@ -3,6 +3,7 @@ django-stubs
 mypy
 pre-commit
 pytest
+pytest-cov
 pytest-django
 pytest-mock
 ruff
@@ -11,8 +12,10 @@ yamllint
 
 # Other build or development dependencies
 build
+ipython
 twine
 
 # Run-time dependencies
 django
 django-extensions
+wagtail
