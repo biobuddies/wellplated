@@ -76,7 +76,7 @@ ROOT_URLCONF = 'demodj.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [],
+        'DIRS': ['wellplated/icons'],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [

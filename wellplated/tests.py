@@ -94,6 +94,7 @@ def test_container_creation() -> None:
     Container.objects.bulk_create([Container(format=final_tube)])
     assert Container.objects.filter(format=final_tube).latest('pk').pk - first_new_container_pk == 2
 
+
 @mark.django_db
 def test_container_external_id() -> None:
     """Use external ID for container code when provided without sacrificing uniqueness."""
@@ -105,9 +106,10 @@ def test_container_external_id() -> None:
     c3 = Container.objects.create(format=f3, external_id=c1.pk)
     for code in Container.objects.filter(format__in={f1, f2, f3}).values_list('code', flat=True):
         assert int(code[5:]) == c1.pk
-    
+
     with raises(IntegrityError):
         Container.objects.create(format=f1, external_id=c1.pk)
+
 
 @mark.django_db
 def test_container_dot_well_label(mocker: 'MockerFixture') -> None:

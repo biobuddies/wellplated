@@ -30,22 +30,27 @@ from django.db.models.functions import (
     Right,
     Substr,
 )
-from django.db.models.lookups import GreaterThanOrEqual, LessThanOrEqual
+from django.db.models.lookups import Contains, GreaterThanOrEqual, LessThanOrEqual
 from modelcluster.fields import ParentalKey
+
+from wellplated.models import CheckedCharField, CheckedPositiveSmallIntegerField
 
 PREFIX_ID_LENGTH = 12
 CONTAINER_CODE_LENGTH = 1 + 2 + PREFIX_ID_LENGTH  # bottom row, right column
 
-
+# Tried using '%(app_label)s_%(class)s' as mentioned in
+# https://docs.djangoproject.com/en/5.1/ref/models/constraints/
+# but that resulted in wellplated_format as expected but also
+# wellplated_newformat, presumably due to some migration renaming.
+table = 'wellplated_format'
 format_checks = {
-    'format-bottom-row-length-1': Q(bottom_row__length=1),
-    'format-bottom-row-gte-A': Q(bottom_row__gte='A'),
-    'format-bottom-row-lte-P': Q(bottom_row__lte='P'),
-    'format-right-column-gte-1': Q(right_column__gte=1),
-    'format-right-column-lte-24': Q(right_column__lte=24),
-    # Dot/period separates Container serial code from Well label
-    'format-prefix-no-dot': ~Q(prefix__contains='.'),
-    'format-prefix-length-lte-11': Q(prefix__length__lte=PREFIX_ID_LENGTH - 1),
+    f'len({table}.bottom_row) == 1': Q(bottom_row__length=1),
+    f"{table}.bottom_row <= 'P'": Q(bottom_row__lte='P'),
+    f"{table}.bottom_row >= 'A'": Q(bottom_row__gte='A'),
+    f'{table}.right_column >= 1': Q(right_column__gte=1),
+    f'{table}.right_column <= 24': Q(right_column__lte=24),
+    f'len({table}.prefix) <= {PREFIX_ID_LENGTH - 1}': Q(prefix__length__lte=PREFIX_ID_LENGTH - 1),
+    f"'.' not in {table}.prefix": ~Contains('prefix', '.'),
 }
 
 well_checks = {
@@ -117,12 +122,9 @@ class Migration(migrations.Migration):
                         auto_created=True, primary_key=True, serialize=False, verbose_name='ID'
                     ),
                 ),
-                ('bottom_row', CharField(default='H', editable=False, max_length=1)),
-                (
-                    'right_column',
-                    PositiveSmallIntegerField(default=12, editable=False, max_length=2),
-                ),
-                ('prefix', CharField(editable=False, max_length=PREFIX_ID_LENGTH - 1)),
+                ('bottom_row', CheckedCharField(default='H', max_length=1)),
+                ('right_column', CheckedPositiveSmallIntegerField(default=12, max_length=2)),
+                ('prefix', CheckedCharField(max_length=PREFIX_ID_LENGTH - 1, unique=True)),
                 (
                     'bottom_right_prefix',
                     GeneratedField(
@@ -150,10 +152,7 @@ class Migration(migrations.Migration):
                         auto_created=True, primary_key=True, serialize=False, verbose_name='ID'
                     ),
                 ),
-                (
-                    'external_id',
-                    PositiveSmallIntegerField(blank=True, default=None, editable=False, null=True),
-                ),
+                ('external_id', PositiveSmallIntegerField(blank=True, default=None, null=True)),
                 (
                     'code',
                     GeneratedField(

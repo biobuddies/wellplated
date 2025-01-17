@@ -1,11 +1,12 @@
 """Database tables (Models) and columns (Fields) for liquid in plates and tubes"""
 
 from re import compile
-from typing import Self
+from typing import ClassVar, Self
 
 from django.contrib.auth.models import User
 from django.db.models import (
     PROTECT,
+    BaseConstraint,
     CharField,
     CheckConstraint,
     DateTimeField,
@@ -35,7 +36,11 @@ from django_stubs_ext.db.models import TypedModelMeta
 from modelcluster.fields import ParentalKey
 from modelcluster.models import ClusterableModel
 from wagtail.admin.panels import FieldPanel, InlinePanel
+from wagtail.hooks import register
 from wagtail.snippets.models import register_snippet
+from wagtail.snippets.views.snippets import SnippetViewSet
+
+from wellplated.fields import CheckedCharField, CheckedPositiveSmallIntegerField
 
 LABEL_384 = compile(r'^(?P<row>[A-P])(?P<column>[012]?[0-9])$')
 PREFIX_ID_LENGTH = 12  # TODO make this configurable
@@ -44,28 +49,29 @@ CONTAINER_CODE_LENGTH = 1 + 2 + PREFIX_ID_LENGTH  # bottom row, right column
 CharField.register_lookup(Length)
 
 
-format_checks = {
-    'format-bottom-row-length-1': Q(bottom_row__length=1),
-    'format-bottom-row-gte-A': Q(bottom_row__gte='A'),
-    'format-bottom-row-lte-P': Q(bottom_row__lte='P'),
-    'format-right-column-gte-1': Q(right_column__gte=1),
-    'format-right-column-lte-24': Q(right_column__lte=24),
-    # Dot/period separates Container serial code from Well label
-    'format-prefix-no-dot': ~Q(prefix__contains='.'),
-    'format-prefix-length-lte-11': Q(prefix__length__lte=PREFIX_ID_LENGTH - 1),
-}
-
-
-@register_snippet
 class Format(Model):
-    """Rows, columns, and planned usage"""
+    """
+    Rows, columns, and planned usage
 
-    # Rows must range between 'A' and this (inclusive); default to 96-well plate
-    bottom_row = CharField(default='H', editable=False, max_length=1)
-    # Columns must range between 1 and this (inclusive); default to 96-well plate
-    right_column = PositiveSmallIntegerField(default=12, editable=False, max_length=2)
+    Bottom (maximum) row character and right (maximum) column number are currently set for
+    16*24 == 384-well plates. Up to 26 rows ('Z') and 32767 columns would be easy to support if
+    anyone has a need. documentation/design.md discusses possibilities and questions for
+    32*48 == 1536-well plate support.
+    """
 
-    prefix = CharField(editable=False, max_length=PREFIX_ID_LENGTH - 1)
+    # Rows must range between 'A' and this (inclusive); default to H for 8*12 96-well plate
+    bottom_row = CheckedCharField(
+        default='H', max_length=1, max_value='P', min_length=1, min_value='A'
+    )
+    # Columns must range between 1 and this (inclusive); default to 12 for 8*12 96-well plate
+    right_column = CheckedPositiveSmallIntegerField(default=12, min_value=1, max_value=24)
+
+    prefix = CheckedCharField(
+        max_length=PREFIX_ID_LENGTH - 1,
+        min_length=0,
+        omits='.',  # Dot/period separates Container serial code from Well label
+        unique=True,
+    )
 
     # GeneratedFields cannot be primary keys, but ForeignKey can reference any unique field.
     # So pack the maximum row, maximum column, and prefix together so Container can use them
@@ -86,31 +92,40 @@ class Format(Model):
 
     # Optimization: variable length fields last
     purpose = TextField(blank=False, unique=True)  # How the contents of wells should be interpreted
+    # TODO forms.fields.TextField(min_length=1)
 
     containers: Manager['Container']
 
     class Meta(TypedModelMeta):
-        """
-        Maximum row character and column number are currently set for 16*24 == 384-well plates.
+        """Empty static definition ensures ModelState.from_model() considers constraints"""
 
-        Up to 26 rows ('Z') and 32767 columns would be easy to support if anyone has a need.
-        documentation/design.md discusses possibilities for 32*48 == 1536-well plate support.
-        """
-
-        constraints = [  # noqa: RUF012
-            CheckConstraint(condition=condition, name=name)
-            for name, condition in format_checks.items()
-        ]
+        constraints: ClassVar[list[BaseConstraint]] = []
 
     def __str__(self) -> str:
         return f'{self.bottom_right_prefix}'
+
+
+@register('register_icons')
+def register_icons(icons):
+    return icons + ['braille.svg']
+
+
+class FormatViewSet(SnippetViewSet):
+    """Customize /manage/snippets interface"""
+
+    model = Format
+    icon = 'braille'
+    list_display = ('bottom_right_prefix', 'purpose', 'bottom_row', 'right_column', 'prefix')
+
+
+register_snippet(Format, FormatViewSet)
 
 
 @register_snippet
 class Container(ClusterableModel):
     """A Container is uniquely identified by its serial code and has Wells"""
 
-    external_id = PositiveSmallIntegerField(blank=True, default=None, editable=False, null=True)
+    external_id = PositiveSmallIntegerField(blank=True, default=None, null=True)
     code = GeneratedField(
         db_persist=True,
         expression=Concat(
