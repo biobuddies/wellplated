@@ -1,15 +1,10 @@
-"""Models where keyword arguments imply database constraints and validators"""
+"""Models with database constraints, validators, and HTML5 attributes"""
 
 from django.core.checks import CheckMessage
 from django.db.models import CharField, CheckConstraint, Model, PositiveSmallIntegerField, Q
 from django.db.models.functions import Length
-from django.db.models.lookups import Contains
 
 CharField.register_lookup(Length)
-
-
-def Equal(left, right):
-    return Q(left=right)
 
 
 class CheckedCharField(CharField):
@@ -23,8 +18,8 @@ class CheckedCharField(CharField):
 
     def __init__(
         self,
-        # https://docs.djangoproject.com/en/5.1/ref/databases/#character-fields
         *args,
+        # https://docs.djangoproject.com/en/5.1/ref/databases/#character-fields
         max_length: int = 255,
         max_value: str = '',
         min_length: int = 1,
@@ -40,15 +35,15 @@ class CheckedCharField(CharField):
 
         super().__init__(*args, max_length=max_length, **kwargs)
 
-    def check(self, **kwargs) -> list[CheckMessage]:
-        return [
-            *super().check(**kwargs)
-            ## TODO check stuff like
-            # lengths are non-negative
-        ]
-
     def contribute_to_class(self, cls: type[Model], name: str, private_only: bool = False):
         super().contribute_to_class(cls, name)
+
+        if cls.__module__ == '__fake__':
+            return  # Avoid duplicate constraints when migrating
+
+        # Ensure ModelState.from_model() considers constraints
+        cls._meta.original_attrs['constraints'] = cls._meta.original_attrs.get('constraints', [])
+
         constraints = cls._meta.constraints
 
         def check(message: str, **kwargs) -> None:
@@ -56,10 +51,10 @@ class CheckedCharField(CharField):
             lookup, value = kwargs.popitem()
             constraints.append(
                 CheckConstraint(
-                    # Lookup classes also work: `LessThanOrEqual(F(name), self.max_value)`
-                    # But column names need to be wrapped either in a functions like Length() or
-                    # with F() to ensure that in the generated SQL, they are double quoted instead
-                    # of single quoted like string literals.
+                    # Lookup classes can also work: `LessThanOrEqual(F(name), self.max_value)`
+                    # But column names need to be wrapped either in functions like Length() or
+                    # with F() to ensure that in the generated SQL, they are double quoted columns
+                    # instead of single quoted string literals.
                     condition=Q((f'{name}__{lookup}', value)),
                     name=message.format(column=f'{cls._meta.db_table}.{name}', value=value),
                 )
@@ -77,12 +72,8 @@ class CheckedCharField(CharField):
         if self.min_value:
             check("{column} >= '{value}'", gte=self.min_value)
         if self.omits:
-            constraints.append(
-                CheckConstraint(
-                    condition=~Contains(name, self.omits),
-                    name=f"'{self.omits}' not in {cls._meta.db_table}.{name}",
-                )
-            )
+            (check("'{value}' not in {column}", contains=self.omits),)
+            constraints[-1].condition = ~constraints[-1].condition
 
         def formfield(self, *_args, **kwargs):
             attributes = {'max_length': self.max_length, 'min_length': self.min_length}
@@ -106,28 +97,44 @@ class CheckedPositiveSmallIntegerField(PositiveSmallIntegerField):
         # To aid fixed-length string calculations; defined late because superclass would remove
         self.max_length = len(str(max_value))
 
+    def __str__(self) -> str:
+        # TODO what about description?
+        return f'Integer between {self.min_value} and {self.max_value} inclusive'
+
     def _check_max_length_warning(self) -> list:
         return []
 
-    def check(self, **kwargs) -> list[CheckMessage]:
-        """TODO Silence the warning about max_length on PositiveSmallIntegerField"""
-        # TODO check min_value and max_value on self instance are within range those on PositiveSmallIntegerField class
-        return [*super().check(**kwargs)]
-
     def contribute_to_class(self, cls: type[Model], name: str, private_only: bool = False):  # noqa: FBT002
-        super().contribute_to_class(cls, name)
-        cls._meta.constraints.extend(
-            [
-                CheckConstraint(
-                    condition=Q(**{f'{name}__gte': self.min_value}),
-                    name=f'{cls._meta.db_table}.{name} >= {self.min_value}',
-                ),
-                CheckConstraint(
-                    condition=Q(**{f'{name}__lte': self.max_value}),
-                    name=f'{cls._meta.db_table}.{name} <= {self.max_value}',
-                ),
-            ]
-        )
+        super().contribute_to_class(cls, name, private_only=private_only)
+
+        if cls.__module__ == '__fake__':
+            return  # Avoid duplicating constraints during migrate
+
+        if 'constraints' not in cls._meta.original_attrs:
+            # Ensure ModelState.from_model() considers constraints
+            cls._meta.original_attrs['constraints'] = []
+
+        for constraint in (
+            CheckConstraint(
+                condition=Q(**{f'{name}__gte': self.min_value}),
+                name=f'{cls._meta.db_table}.{name} >= {self.min_value}',
+            ),
+            CheckConstraint(
+                condition=Q(**{f'{name}__lte': self.max_value}),
+                name=f'{cls._meta.db_table}.{name} <= {self.max_value}',
+            ),
+        ):
+            if constraint not in cls._meta.constraints:
+                cls._meta.constraints.append(constraint)
+
+    def deconstruct(self) -> tuple:
+        name, path, args, kwargs = super().deconstruct()
+        del kwargs['max_length']
+        if self.max_value != 32767:
+            kwargs['max_value'] = self.max_value
+        if self.min_value:
+            kwargs['min_value'] = self.min_value
+        return name, path, args, kwargs
 
     @property
     def description(self) -> str:

@@ -30,7 +30,7 @@ from django.db.models.functions import (
     Right,
     Substr,
 )
-from django.db.models.lookups import Contains, GreaterThanOrEqual, LessThanOrEqual
+from django.db.models.lookups import GreaterThanOrEqual, LessThanOrEqual
 from modelcluster.fields import ParentalKey
 
 from wellplated.models import CheckedCharField, CheckedPositiveSmallIntegerField
@@ -50,7 +50,7 @@ format_checks = {
     f'{table}.right_column >= 1': Q(right_column__gte=1),
     f'{table}.right_column <= 24': Q(right_column__lte=24),
     f'len({table}.prefix) <= {PREFIX_ID_LENGTH - 1}': Q(prefix__length__lte=PREFIX_ID_LENGTH - 1),
-    f"'.' not in {table}.prefix": ~Contains('prefix', '.'),
+    f"'.' not in {table}.prefix": ~Q(prefix__contains='.'),
 }
 
 well_checks = {
@@ -123,7 +123,10 @@ class Migration(migrations.Migration):
                     ),
                 ),
                 ('bottom_row', CheckedCharField(default='H', max_length=1)),
-                ('right_column', CheckedPositiveSmallIntegerField(default=12, max_length=2)),
+                (
+                    'right_column',
+                    CheckedPositiveSmallIntegerField(default=12, max_value=24, min_value=1),
+                ),
                 ('prefix', CheckedCharField(max_length=PREFIX_ID_LENGTH - 1, unique=True)),
                 (
                     'bottom_right_prefix',

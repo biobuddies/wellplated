@@ -1,17 +1,11 @@
 """Test the models"""
 
-from typing import TYPE_CHECKING
-
 from django.contrib.auth import get_user_model
 from django.db.utils import IntegrityError
 from pytest import mark, raises
+from pytest_mock import MockerFixture
 
-if TYPE_CHECKING:
-    from pytest_mock import MockerFixture
-
-    from wellplated.models import User
-
-from wellplated.models import Container, Format, Plan, Transfer, Well
+from wellplated.models import Container, Format, Plan, Transfer, User, Well
 
 
 def get_test_user() -> 'User':
@@ -33,11 +27,10 @@ def test_untracked_data() -> None:
         == 2
     )
 
-    assert Well.objects.start.label == 'A01'
-    assert Well.objects.end.label == 'A01'
+    assert Well.objects.start.label == Well.objects.end.label == 'A01'
 
-    assert Well.objects.start.container.format.purpose == 'start'
-    assert Well.objects.end.container.format.purpose == 'end'
+    assert str(Well.objects.start.container.format) == 'A01start'
+    assert str(Well.objects.end.container.format) == 'A01end'
 
 
 @mark.django_db

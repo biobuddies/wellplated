@@ -1,12 +1,11 @@
 """Database tables (Models) and columns (Fields) for liquid in plates and tubes"""
 
 from re import compile
-from typing import ClassVar, Self
+from typing import Self
 
 from django.contrib.auth.models import User
 from django.db.models import (
     PROTECT,
-    BaseConstraint,
     CharField,
     CheckConstraint,
     DateTimeField,
@@ -36,7 +35,6 @@ from django_stubs_ext.db.models import TypedModelMeta
 from modelcluster.fields import ParentalKey
 from modelcluster.models import ClusterableModel
 from wagtail.admin.panels import FieldPanel, InlinePanel
-from wagtail.hooks import register
 from wagtail.snippets.models import register_snippet
 from wagtail.snippets.views.snippets import SnippetViewSet
 
@@ -96,17 +94,12 @@ class Format(Model):
 
     containers: Manager['Container']
 
-    class Meta(TypedModelMeta):
-        """Empty static definition ensures ModelState.from_model() considers constraints"""
-
-        constraints: ClassVar[list[BaseConstraint]] = []
-
     def __str__(self) -> str:
         return f'{self.bottom_right_prefix}'
 
 
 class FormatViewSet(SnippetViewSet):
-    """Customize /manage/snippets interface"""
+    """Customize /manage/snippets/wellplated/format interface"""
 
     model = Format
     list_display = ('bottom_right_prefix', 'purpose', 'bottom_row', 'right_column', 'prefix')
@@ -146,7 +139,6 @@ class Container(ClusterableModel):
     )
 
     panels = (
-        FieldPanel('code', read_only=True),
         FieldPanel('created_at', read_only=True),
         FieldPanel('format', read_only=True),
         InlinePanel('wells'),
