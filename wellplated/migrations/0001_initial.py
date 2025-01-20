@@ -16,21 +16,11 @@ from django.db.models import (
     PositiveSmallIntegerField,
     Q,
     TextField,
+    UniqueConstraint,
     Value,
 )
 from django.db.models.deletion import PROTECT
-from django.db.models.functions import (
-    Cast,
-    Coalesce,
-    Concat,
-    Left,
-    Length,
-    LPad,
-    Replace,
-    Right,
-    Substr,
-)
-from django.db.models.lookups import GreaterThanOrEqual, LessThanOrEqual
+from django.db.models.functions import Cast, Coalesce, Concat, Left, Length, LPad, Substr
 from modelcluster.fields import ParentalKey
 
 from wellplated.models import CheckedCharField, CheckedPositiveSmallIntegerField
@@ -38,54 +28,57 @@ from wellplated.models import CheckedCharField, CheckedPositiveSmallIntegerField
 PREFIX_ID_LENGTH = 12
 CONTAINER_CODE_LENGTH = 1 + 2 + PREFIX_ID_LENGTH  # bottom row, right column
 
+from re import compile
+
+extract_model = compile(r'^.*wellplated_(?P<model>[a-z]+)\..+$')
+
+
 # Tried using '%(app_label)s_%(class)s' as mentioned in
 # https://docs.djangoproject.com/en/5.1/ref/models/constraints/
 # but that resulted in wellplated_format as expected but also
 # wellplated_newformat, presumably due to some migration renaming.
-table = 'wellplated_format'
-format_checks = {
-    f'len({table}.bottom_row) == 1': Q(bottom_row__length=1),
-    f"{table}.bottom_row <= 'P'": Q(bottom_row__lte='P'),
-    f"{table}.bottom_row >= 'A'": Q(bottom_row__gte='A'),
-    f'{table}.right_column >= 1': Q(right_column__gte=1),
-    f'{table}.right_column <= 24': Q(right_column__lte=24),
-    f'len({table}.prefix) <= {PREFIX_ID_LENGTH - 1}': Q(prefix__length__lte=PREFIX_ID_LENGTH - 1),
-    f"'.' not in {table}.prefix": ~Q(prefix__contains='.'),
-}
-
-well_checks = {
-    'well-bottom-row-gte-A': GreaterThanOrEqual(Left('label', 1), 'A'),
-    'well-bottom-row-lte-format-max': LessThanOrEqual(Left('label', 1), Left('container', 1)),
-    'well-right-column-gte-1': GreaterThanOrEqual(
-        Cast(Right('label', 2), PositiveSmallIntegerField()), 1
-    ),
-    'well-right-column-lte-format-max': LessThanOrEqual(
-        Right('label', 2), Cast(Substr('container', 2, 4), PositiveSmallIntegerField())
-    ),
-    'well-container-code-label-length-19': Q(
-        # container code, dot, label row, label column
-        container_code_label__length=CONTAINER_CODE_LENGTH + 1 + 1 + 2
-    ),
-    'well-container-code-label-has-1-dot': Q(
-        container_code_label__length=(
-            Length(Replace('container_code_label', Value('.'), Value(''))) + 1
-        )
-    ),
-}
-
-
 def constrain_models() -> list[migrations.AddConstraint]:
     """Forbid out-of-bounds at the database level"""
     return [
         migrations.AddConstraint(
-            constraint=CheckConstraint(condition=condition, name=name), model_name='format'
+            constraint=CheckConstraint(condition=condition, name=name),
+            model_name=extract_model.match(name).group(1),
         )
-        for name, condition in format_checks.items()
+        for name, condition in (
+            ('len(wellplated_format.bottom_row) == 1', Q(bottom_row__length=1)),
+            ("wellplated_format.bottom_row <= 'P'", Q(bottom_row__lte='P')),
+            ("wellplated_format.bottom_row >= 'A'", Q(bottom_row__gte='A')),
+            ('wellplated_format.right_column >= 1', Q(right_column__gte=1)),
+            ('wellplated_format.right_column <= 24', Q(right_column__lte=24)),
+            (
+                f'len(wellplated_format.prefix) <= {PREFIX_ID_LENGTH - 1}',
+                Q(prefix__length__lte=PREFIX_ID_LENGTH - 1),
+            ),
+            ("'.' not in wellplated_format.prefix", ~Q(prefix__contains='.')),
+            ('wellplated_container.external_id >= 0', Q(external_id__gte=0)),
+            (
+                'wellplated_container.external_id <= 99999999999',
+                Q(external_id__lte=int('9' * (PREFIX_ID_LENGTH - 1))),
+            ),
+            ('len(wellplated_well.row) == 1', Q(row__length=1)),
+            ("wellplated_well.row >= 'A'", Q(row__gte='A')),
+            (
+                'wellplated_well.row <= wellplated_well.container[:1]',
+                Q(row__lte=Left('container', 1)),
+            ),
+            ('wellplated_well.column >= 1', Q(column__gte=1)),
+            (
+                'wellplated_well.column <= int(wellplated_well.container[1:2])',
+                Q(column__lte=Cast(Substr('container', 2, 4), PositiveSmallIntegerField())),
+            ),
+        )
     ] + [
         migrations.AddConstraint(
-            constraint=CheckConstraint(condition=condition, name=name), model_name='well'
+            constraint=UniqueConstraint(
+                fields=('container', 'row', 'column'), name='unique_container_row_column'
+            ),
+            model_name='well',
         )
-        for name, condition in well_checks.items()
     ]
 
 
@@ -103,7 +96,7 @@ def create_untracked(apps: state.StateApps, _schema_editor: BaseDatabaseSchemaEd
                 bottom_row='A', right_column=1, prefix=purpose, purpose=purpose
             ),
         )
-        container.wells.add(apps.get_model('wellplated', 'Well')(label='A01'))
+        container.wells.add(apps.get_model('wellplated', 'Well')(row='A', column=1))
         container.wells.commit()
 
 
@@ -155,7 +148,15 @@ class Migration(migrations.Migration):
                         auto_created=True, primary_key=True, serialize=False, verbose_name='ID'
                     ),
                 ),
-                ('external_id', PositiveSmallIntegerField(blank=True, default=None, null=True)),
+                (
+                    'external_id',
+                    CheckedPositiveSmallIntegerField(
+                        blank=True,
+                        default=None,
+                        max_value=int('9' * (PREFIX_ID_LENGTH - 1)),
+                        null=True,
+                    ),
+                ),
                 (
                     'code',
                     GeneratedField(
@@ -207,16 +208,12 @@ class Migration(migrations.Migration):
                         to_field='code',
                     ),
                 ),
-                ('label', CharField(editable=False, max_length=3)),
+                ('row', CheckedCharField(max_length=1, min_length=1, min_value='A')),
                 (
-                    'container_code_label',
-                    GeneratedField(
-                        db_persist=True,
-                        editable=False,
-                        expression=Concat('container', Value('.'), 'label'),
-                        # dot, row, column
-                        output_field=CharField(max_length=CONTAINER_CODE_LENGTH + 1 + 1 + 2),
-                        unique=True,
+                    'column',
+                    CheckedPositiveSmallIntegerField(
+                        max_value=Cast(Substr('container', 2, 4), PositiveSmallIntegerField()),
+                        min_value=1,
                     ),
                 ),
             ],

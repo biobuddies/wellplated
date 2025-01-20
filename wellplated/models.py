@@ -7,7 +7,6 @@ from django.contrib.auth.models import User
 from django.db.models import (
     PROTECT,
     CharField,
-    CheckConstraint,
     DateTimeField,
     ForeignKey,
     GeneratedField,
@@ -15,23 +14,11 @@ from django.db.models import (
     ManyToManyField,
     Model,
     PositiveSmallIntegerField,
-    Q,
     TextField,
+    UniqueConstraint,
     Value,
 )
-from django.db.models.functions import (
-    Cast,
-    Coalesce,
-    Concat,
-    Left,
-    Length,
-    LPad,
-    Replace,
-    Right,
-    Substr,
-)
-from django.db.models.lookups import GreaterThanOrEqual, LessThanOrEqual
-from django_stubs_ext.db.models import TypedModelMeta
+from django.db.models.functions import Cast, Coalesce, Concat, Left, Length, LPad, Substr
 from modelcluster.fields import ParentalKey
 from modelcluster.models import ClusterableModel
 from wagtail.admin.panels import FieldPanel, InlinePanel
@@ -112,7 +99,9 @@ register_snippet(Format, FormatViewSet)
 class Container(ClusterableModel):
     """A Container is uniquely identified by its serial code and has Wells"""
 
-    external_id = PositiveSmallIntegerField(blank=True, default=None, null=True)
+    external_id = CheckedPositiveSmallIntegerField(
+        blank=True, default=None, max_value=int('9' * (PREFIX_ID_LENGTH - 1)), null=True
+    )
     code = GeneratedField(
         db_persist=True,
         expression=Concat(
@@ -183,33 +172,12 @@ class WellManager(Manager['Well']):
     @property
     def start(self) -> 'Well':
         """Return the special infinite source well."""
-        return self.get(container_code_label='A01start0000000.A01')
+        return self.get(container='A01start0000000', row='A', column=1)
 
     @property
     def end(self) -> 'Well':
         """Return the special infinite sink well."""
-        return self.get(container_code_label='A01end000000999.A01')
-
-
-well_checks = {
-    'well-bottom-row-gte-A': GreaterThanOrEqual(Left('label', 1), 'A'),
-    'well-bottom-row-lte-format-max': LessThanOrEqual(Left('label', 1), Left('container', 1)),
-    'well-right-column-gte-1': GreaterThanOrEqual(
-        Cast(Right('label', 2), PositiveSmallIntegerField()), 1
-    ),
-    'well-right-column-lte-format-max': LessThanOrEqual(
-        Right('label', 2), Cast(Substr('container', 2, 4), PositiveSmallIntegerField())
-    ),
-    'well-container-code-label-length-19': Q(
-        # dot, label row, label column
-        container_code_label__length=CONTAINER_CODE_LENGTH + 1 + 1 + 2
-    ),
-    'well-container-code-label-has-1-dot': Q(
-        container_code_label__length=(
-            Length(Replace('container_code_label', Value('.'), Value(''))) + 1
-        )
-    ),
-}
+        return self.get(container='A01end000000999', row='A', column=1)
 
 
 class Well(Model):
@@ -234,14 +202,11 @@ class Well(Model):
         related_name='wells',
         to_field='code',
     )
-    label = CharField(editable=False, max_length=3)
-    container_code_label = GeneratedField(
-        db_persist=True,
-        editable=False,
-        expression=Concat('container', Value('.'), 'label'),
-        # dot, label row, label column
-        output_field=CharField(max_length=CONTAINER_CODE_LENGTH + 1 + 1 + 2),
-        unique=True,
+    row = CheckedCharField(
+        max_length=1, max_value=Left('container', 1), min_length=1, min_value='A'
+    )
+    column = CheckedPositiveSmallIntegerField(
+        max_value=Cast(Substr('container', 2, 4), PositiveSmallIntegerField()), min_value=1
     )
 
     sinks: ManyToManyField[Self, Self] = ManyToManyField(
@@ -254,14 +219,15 @@ class Well(Model):
 
     objects = WellManager()
 
-    class Meta(TypedModelMeta):
-        constraints = [  # noqa: RUF012
-            CheckConstraint(condition=condition, name=name)
-            for name, condition in well_checks.items()
+    class Meta:
+        constraints = [
+            UniqueConstraint(
+                fields=['container', 'row', 'column'], name='unique_container_row_column'
+            )
         ]
 
     def __str__(self) -> str:
-        return f'{self.container_code_label}'
+        return f'{self.container}.{self.row}{self.column:02}'
 
 
 @register_snippet

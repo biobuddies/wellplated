@@ -1,8 +1,7 @@
 """Models with database constraints, validators, and HTML5 attributes"""
 
-from django.core.checks import CheckMessage
 from django.db.models import CharField, CheckConstraint, Model, PositiveSmallIntegerField, Q
-from django.db.models.functions import Length
+from django.db.models.functions import Cast, Left, Length, Substr
 
 CharField.register_lookup(Length)
 
@@ -21,7 +20,7 @@ class CheckedCharField(CharField):
         *args,
         # https://docs.djangoproject.com/en/5.1/ref/databases/#character-fields
         max_length: int = 255,
-        max_value: str = '',
+        max_value: Left | str = '',
         min_length: int = 1,
         min_value: str = '',
         omits: str = '',  # Could become `str | Sequence[str]`
@@ -48,15 +47,22 @@ class CheckedCharField(CharField):
 
         def check(message: str, **kwargs) -> None:
             """Add a constraint check"""
-            lookup, value = kwargs.popitem()
+            lookup, sql_value = kwargs.popitem()
+            if isinstance(sql_value, Left):
+                python_value = (
+                    f'{cls._meta.db_table}.{sql_value.source_expressions[0].name}'
+                    + f'[:{sql_value.source_expressions[1].value}]'
+                )
+            else:
+                python_value = repr(sql_value)
             constraints.append(
                 CheckConstraint(
                     # Lookup classes can also work: `LessThanOrEqual(F(name), self.max_value)`
                     # But column names need to be wrapped either in functions like Length() or
                     # with F() to ensure that in the generated SQL, they are double quoted columns
                     # instead of single quoted string literals.
-                    condition=Q((f'{name}__{lookup}', value)),
-                    name=message.format(column=f'{cls._meta.db_table}.{name}', value=value),
+                    condition=Q((f'{name}__{lookup}', sql_value)),
+                    name=message.format(column=f'{cls._meta.db_table}.{name}', value=python_value),
                 )
             )
 
@@ -68,11 +74,11 @@ class CheckedCharField(CharField):
                 check('len({column}) >= {value}', length__gte=self.min_length)
 
         if self.max_value:
-            check("{column} <= '{value}'", lte=self.max_value)
+            check('{column} <= {value}', lte=self.max_value)
         if self.min_value:
-            check("{column} >= '{value}'", gte=self.min_value)
+            check('{column} >= {value}', gte=self.min_value)
         if self.omits:
-            (check("'{value}' not in {column}", contains=self.omits),)
+            (check('{value} not in {column}', contains=self.omits),)
             constraints[-1].condition = ~constraints[-1].condition
 
         def formfield(self, *_args, **kwargs):
@@ -86,7 +92,7 @@ class CheckedPositiveSmallIntegerField(PositiveSmallIntegerField):
     """HTML, Django serializer, and database constraints for positive small integers"""
 
     max_length: int
-    max_value: int
+    max_value: Cast | int
     min_value: int
 
     def __init__(self, *args, min_value=0, max_value=32767, **kwargs) -> None:
@@ -114,18 +120,30 @@ class CheckedPositiveSmallIntegerField(PositiveSmallIntegerField):
             # Ensure ModelState.from_model() considers constraints
             cls._meta.original_attrs['constraints'] = []
 
-        for constraint in (
+        cls._meta.constraints.append(
             CheckConstraint(
                 condition=Q(**{f'{name}__gte': self.min_value}),
                 name=f'{cls._meta.db_table}.{name} >= {self.min_value}',
-            ),
+            )
+        )
+        if (
+            isinstance(self.max_value, Cast)
+            and isinstance(self.max_value.output_field, PositiveSmallIntegerField)
+            and isinstance(self.max_value.source_expressions[0], Substr)
+        ):
+            python_value = (
+                f'int({cls._meta.db_table}.{self.max_value.source_expressions[0].source_expressions[0].name}'
+                + f'[{self.max_value.source_expressions[0].source_expressions[1].value - 1}:'
+                + f'{self.max_value.source_expressions[0].source_expressions[2].value - 2}])'
+            )
+        else:
+            python_value = self.max_value
+        cls._meta.constraints.append(
             CheckConstraint(
                 condition=Q(**{f'{name}__lte': self.max_value}),
-                name=f'{cls._meta.db_table}.{name} <= {self.max_value}',
-            ),
-        ):
-            if constraint not in cls._meta.constraints:
-                cls._meta.constraints.append(constraint)
+                name=f'{cls._meta.db_table}.{name} <= {python_value}',
+            )
+        )
 
     def deconstruct(self) -> tuple:
         name, path, args, kwargs = super().deconstruct()
