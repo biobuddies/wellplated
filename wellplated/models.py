@@ -82,7 +82,7 @@ class Format(Model):
     containers: Manager['Container']
 
     def __str__(self) -> str:
-        return f'{self.bottom_right_prefix}'
+        return self.prefix
 
 
 class FormatViewSet(SnippetViewSet):
@@ -145,25 +145,12 @@ class Container(ClusterableModel):
         label_match = LABEL_384.match(label)
         if not label_match or label_match.groupdict().keys() != {'row', 'column'}:
             raise AttributeError(f'Failed to parse {label}')  # noqa: TRY003
-        row = label_match.groupdict()['row']
         column = int(label_match.groupdict()['column'], 10)
 
-        error = []
-        if row < 'A':
-            error.append(f'{label} row {row} less than A')
-        elif row > self.format.bottom_row:
-            error.append(f'{label} row {row} greater than {self.format.bottom_row}')
-        if column < 1:
-            error.append(f'{label} column {column} less than 1')
-        elif column > self.format.right_column:
-            error.append(f'{label} column {column} greater than {self.format.right_column}')
-        if error:
-            raise AttributeError(', '.join(error))
-
-        return self.wells.get(label=f'{row}{column:02}')
+        return self.wells.get(row=label_match.groupdict()['row'], column=column)
 
     def __str__(self) -> str:
-        return self.code
+        return self.code[1 + 2 :]  # row, column
 
 
 class WellManager(Manager['Well']):
@@ -206,7 +193,7 @@ class Well(Model):
         max_length=1, max_value=Left('container', 1), min_length=1, min_value='A'
     )
     column = CheckedPositiveSmallIntegerField(
-        max_value=Cast(Substr('container', 2, 4), PositiveSmallIntegerField()), min_value=1
+        max_value=Cast(Substr('container', 2, 2), PositiveSmallIntegerField()), min_value=1
     )
 
     sinks: ManyToManyField[Self, Self] = ManyToManyField(
@@ -227,7 +214,7 @@ class Well(Model):
         ]
 
     def __str__(self) -> str:
-        return f'{self.container}.{self.row}{self.column:02}'
+        return f'{self.container_id[1 + 2:]}.{self.row}{self.column:02}'  # row, column
 
 
 @register_snippet

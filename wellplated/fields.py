@@ -131,10 +131,18 @@ class CheckedPositiveSmallIntegerField(PositiveSmallIntegerField):
             and isinstance(self.max_value.output_field, PositiveSmallIntegerField)
             and isinstance(self.max_value.source_expressions[0], Substr)
         ):
+            zero_indexed_start = (
+                self.max_value.source_expressions[0].source_expressions[1].value - 1
+            )
             python_value = (
-                f'int({cls._meta.db_table}.{self.max_value.source_expressions[0].source_expressions[0].name}'
-                + f'[{self.max_value.source_expressions[0].source_expressions[1].value - 1}:'
-                + f'{self.max_value.source_expressions[0].source_expressions[2].value - 2}])'
+                f'int({cls._meta.db_table}.'
+                + self.max_value.source_expressions[0].source_expressions[0].name
+                + f'[{zero_indexed_start}:'
+                + str(
+                    zero_indexed_start
+                    + self.max_value.source_expressions[0].source_expressions[2].value
+                )
+                + '])'
             )
         else:
             python_value = self.max_value

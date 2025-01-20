@@ -68,8 +68,8 @@ def constrain_models() -> list[migrations.AddConstraint]:
             ),
             ('wellplated_well.column >= 1', Q(column__gte=1)),
             (
-                'wellplated_well.column <= int(wellplated_well.container[1:2])',
-                Q(column__lte=Cast(Substr('container', 2, 4), PositiveSmallIntegerField())),
+                'wellplated_well.column <= int(wellplated_well.container[1:3])',
+                Q(column__lte=Cast(Substr('container', 2, 2), PositiveSmallIntegerField())),
             ),
         )
     ] + [
@@ -212,7 +212,7 @@ class Migration(migrations.Migration):
                 (
                     'column',
                     CheckedPositiveSmallIntegerField(
-                        max_value=Cast(Substr('container', 2, 4), PositiveSmallIntegerField()),
+                        max_value=Cast(Substr('container', 2, 2), PositiveSmallIntegerField()),
                         min_value=1,
                     ),
                 ),
