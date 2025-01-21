@@ -3,6 +3,7 @@
 from django.contrib.auth import get_user_model
 from django.db.utils import IntegrityError
 from pytest import mark, raises
+from pytest_django.fixtures import DjangoAssertNumQueries
 from pytest_mock import MockerFixture
 
 from wellplated.models import Container, Format, Plan, Transfer, User, Well
@@ -24,7 +25,7 @@ def test_untracked_data() -> None:
 
 
 @mark.django_db
-def test_str(django_assert_num_queries) -> None:
+def test_str(django_assert_num_queries: DjangoAssertNumQueries) -> None:
     """__str__ methods must show useful information without causing extra queries."""
     with django_assert_num_queries(1):
         start_format = Format.objects.get(purpose='start')
@@ -99,8 +100,8 @@ def test_container_external_id() -> None:
     f2 = Format.objects.create(prefix='t2', purpose='tube-two')
     f3 = Format.objects.create(prefix='t3', purpose='tube-three')
     c1 = Container.objects.create(format=f1)
-    c2 = Container.objects.create(format=f2, external_id=c1.pk)
-    c3 = Container.objects.create(format=f3, external_id=c1.pk)
+    _c2 = Container.objects.create(format=f2, external_id=c1.pk)
+    _c3 = Container.objects.create(format=f3, external_id=c1.pk)
     for code in Container.objects.filter(format__in={f1, f2, f3}).values_list('code', flat=True):
         assert int(code[5:]) == c1.pk
 
@@ -109,7 +110,7 @@ def test_container_external_id() -> None:
 
 
 @mark.django_db
-def test_container_dot_well_label(mocker: 'MockerFixture') -> None:
+def test_container_dot_well_label(mocker: MockerFixture) -> None:
     """Containers must accept dot labels to access wells."""
     wip_tube = Container.objects.create(
         format=Format.objects.create(

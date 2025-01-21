@@ -1,7 +1,7 @@
 """Database tables (Models) and columns (Fields) for liquid in plates and tubes"""
 
 from re import compile
-from typing import Self
+from typing import ClassVar, Self
 
 from django.contrib.auth.models import User
 from django.db.models import (
@@ -207,7 +207,7 @@ class Well(Model):
     objects = WellManager()
 
     class Meta:
-        constraints = [
+        constraints: ClassVar = [
             UniqueConstraint(
                 fields=['container', 'row', 'column'], name='unique_container_row_column'
             )
