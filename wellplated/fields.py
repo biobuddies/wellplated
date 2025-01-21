@@ -43,8 +43,6 @@ class CheckedCharField(CharField):
         # Ensure ModelState.from_model() considers constraints
         cls._meta.original_attrs['constraints'] = cls._meta.original_attrs.get('constraints', [])
 
-        constraints = cls._meta.constraints
-
         def check(message: str, **kwargs) -> None:
             """Add a constraint check"""
             lookup, sql_value = kwargs.popitem()
@@ -55,7 +53,7 @@ class CheckedCharField(CharField):
                 )
             else:
                 python_value = repr(sql_value)
-            constraints.append(
+            cls._meta.constraints.append(
                 CheckConstraint(
                     # Lookup classes can also work: `LessThanOrEqual(F(name), self.max_value)`
                     # But column names need to be wrapped either in functions like Length() or
@@ -78,8 +76,8 @@ class CheckedCharField(CharField):
         if self.min_value:
             check('{column} >= {value}', gte=self.min_value)
         if self.omits:
-            (check('{value} not in {column}', contains=self.omits),)
-            constraints[-1].condition = ~constraints[-1].condition
+            check('{value} not in {column}', contains=self.omits)
+            cls._meta.constraints[-1].condition = ~cls._meta.constraints[-1].condition
 
         def formfield(self, *_args, **kwargs):
             attributes = {'max_length': self.max_length, 'min_length': self.min_length}
