@@ -12,7 +12,7 @@ jobs:
             - run: npm install --frozen-lockfile
 
             - uses: astral-sh/setup-uv@v5
-            - run: uv venv && . includes.sh ups
+            - run: uv venv && bash includes.sh ups
 
             - run: source includes.sh && a && pcam --color always --show-diff-on-failure
             - run: .venv/bin/python -m manage check
