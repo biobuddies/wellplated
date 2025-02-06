@@ -11,9 +11,7 @@ jobs:
                   node-version-file: .nvmrc
             - run: npm install --frozen-lockfile
 
-            - uses: actions/setup-python@v5
-              with:
-                  python-version-file: .python-version
+            - uses: astral-sh/setup-uv@v5
             - run: uv venv && . includes.sh ups
 
             - run: source includes.sh && a && pcam --color always --show-diff-on-failure
