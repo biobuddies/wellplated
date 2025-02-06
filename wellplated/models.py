@@ -19,6 +19,7 @@ from django.db.models import (
     Value,
 )
 from django.db.models.functions import Cast, Coalesce, Concat, Left, Length, LPad, Substr
+from django_stubs_ext.db.models import TypedModelMeta
 from modelcluster.fields import ParentalKey
 from modelcluster.models import ClusterableModel
 from wagtail.admin.panels import FieldPanel, InlinePanel
@@ -33,8 +34,9 @@ CONTAINER_CODE_LENGTH = 1 + 2 + PREFIX_ID_LENGTH  # bottom row, right column
 
 CharField.register_lookup(Length)
 
-
-class Format(Model):
+# type issue night be caused by ClusterableModel missing type annotations
+# https://github.com/typeddjango/django-stubs/issues/1023
+class Format(Model):  # type: ignore[django-manager-missing]
     """
     Rows, columns, and planned usage
 
@@ -78,8 +80,6 @@ class Format(Model):
     # Optimization: variable length fields last
     purpose = TextField(blank=False, unique=True)  # How the contents of wells should be interpreted
     # TODO forms.fields.TextField(min_length=1)
-
-    containers: Manager['Container']
 
     def __str__(self) -> str:
         return self.prefix
@@ -206,7 +206,7 @@ class Well(Model):
 
     objects = WellManager()
 
-    class Meta:
+    class Meta(TypedModelMeta):
         constraints: ClassVar = [
             UniqueConstraint(
                 fields=['container', 'row', 'column'], name='unique_container_row_column'

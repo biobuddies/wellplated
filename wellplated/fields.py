@@ -1,9 +1,11 @@
 """Models with database constraints, validators, and HTML5 attributes"""
 
-from typing import Any, Self
+from functools import partial
+from typing import Any, Self, cast
 
-from django.db.models import CharField, CheckConstraint, Model, PositiveSmallIntegerField, Q
+from django.db.models import CharField, CheckConstraint, Model, PositiveSmallIntegerField, Q, Value
 from django.db.models.functions import Cast, Left, Length, Substr
+from django.db.models.options import Options
 from django.forms import Field
 
 CharField.register_lookup(Length)
@@ -35,7 +37,45 @@ class CheckedCharField(CharField):
         self.min_value = min_value
         self.omits = omits
 
-        super().__init__(*args, max_length=max_length, **kwargs)
+        kwargs['max_length'] = max_length
+        super().__init__(*args, **kwargs)
+
+    @staticmethod
+    def check_constraint(
+        meta: Options,
+        name: str,
+        message: str,
+        *,
+        as_needed: bool = True,
+        invert: bool = False,
+        **kwargs: Left | int | str,
+    ) -> None:
+        """Add a constraint check"""
+        lookup, sql_value = kwargs.popitem()
+        if as_needed and not sql_value:
+            return
+
+        # Lookup classes can also work: `LessThanOrEqual(F(name), self.max_value)`
+        # But column names need to be wrapped either in functions like Length() or
+        # with F() to ensure that in the generated SQL, they are double quoted columns
+        # instead of single quoted string literals.
+        condition = Q((f'{name}__{lookup}', sql_value))
+        if invert:
+            condition = ~condition
+
+        if isinstance(sql_value, Left):
+            right_side_column = cast(Left, sql_value.source_expressions[0]).name
+            length = cast(Value, sql_value.source_expressions[1]).value
+            python_value = f'{meta.db_table}.{right_side_column}[:{length}]'
+        else:
+            python_value = repr(sql_value)
+
+        meta.constraints.append(
+            CheckConstraint(
+                condition=condition,
+                name=message.format(column=f'{meta.db_table}.{name}', value=python_value),
+            )
+        )
 
     def contribute_to_class(self, cls: type[Model], name: str, private_only: bool = False) -> None:  # noqa: FBT001, FBT002
         """
@@ -51,47 +91,25 @@ class CheckedCharField(CharField):
         # Ensure ModelState.from_model() considers constraints
         cls._meta.original_attrs['constraints'] = cls._meta.original_attrs.get('constraints', [])
 
-        def check(message: str, **kwargs: Left | int | str) -> None:
-            """Add a constraint check"""
-            lookup, sql_value = kwargs.popitem()
-            if isinstance(sql_value, Left):
-                python_value = (
-                    f'{cls._meta.db_table}.{sql_value.source_expressions[0].name}'
-                    f'[:{sql_value.source_expressions[1].value}]'
-                )
-            else:
-                python_value = repr(sql_value)
-            cls._meta.constraints.append(
-                CheckConstraint(
-                    # Lookup classes can also work: `LessThanOrEqual(F(name), self.max_value)`
-                    # But column names need to be wrapped either in functions like Length() or
-                    # with F() to ensure that in the generated SQL, they are double quoted columns
-                    # instead of single quoted string literals.
-                    condition=Q((f'{name}__{lookup}', sql_value)),
-                    name=message.format(column=f'{cls._meta.db_table}.{name}', value=python_value),
-                )
-            )
+        check = partial(self.check_constraint, cls._meta, name)
 
         if self.max_length == self.min_length:
-            check('len({column}) == {value}', length=self.max_length)
+            check('len({column}) == {value}', as_needed=False, length=self.max_length)
         else:
-            check('len({column}) <= {value}', length__lte=self.max_length)
-            if self.min_length:
-                check('len({column}) >= {value}', length__gte=self.min_length)
+            check('len({column}) <= {value}', as_needed=False, length__lte=self.max_length)
+            check('len({column}) >= {value}', length__gte=self.min_length)
 
-        if self.max_value:
-            check('{column} <= {value}', lte=self.max_value)
-        if self.min_value:
-            check('{column} >= {value}', gte=self.min_value)
+        check('{column} <= {value}', lte=self.max_value)
+        check('{column} >= {value}', gte=self.min_value)
         if self.omits:
-            check('{value} not in {column}', contains=self.omits)
-            cls._meta.constraints[-1].condition = ~cls._meta.constraints[-1].condition
+            check('{value} not in {column}', invert=True, contains=self.omits)
 
-        def formfield(self: Self, *_args: Field, **kwargs: Any) -> Field | None:
-            attributes = {'max_length': self.max_length, 'min_length': self.min_length}
+        def formfield(self: Self, form_class: type[Field], **kwargs: Any) -> Field | None:
+            kwargs['max_length'].setdefault(self.max_length)
+            kwargs['min_length'].setdefault(self.min_length)
             if self.max_length == self.min_length == 1 and self.max_value and self.min_value:
-                attributes['pattern'] = f'[{self.min_value}-{self.max_value}]'
-            return super().formfield(attributes | kwargs)
+                kwargs['pattern'] = f'[{self.min_value}-{self.max_value}]'
+            return super().formfield(form_class, **kwargs)
 
 
 class CheckedPositiveSmallIntegerField(PositiveSmallIntegerField):
@@ -102,7 +120,7 @@ class CheckedPositiveSmallIntegerField(PositiveSmallIntegerField):
     min_value: int
 
     def __init__(
-        self, *args: Any, min_value: int = 0, max_value: int = 32767, **kwargs: Any
+        self, *args: Any, min_value: int = 0, max_value: Cast | int = 32767, **kwargs: Any
     ) -> None:
         """PostgreSQL smallint https://code.djangoproject.com/ticket/12030#comment:14"""
         self.max_value = max_value
@@ -144,21 +162,21 @@ class CheckedPositiveSmallIntegerField(PositiveSmallIntegerField):
             and isinstance(self.max_value.output_field, PositiveSmallIntegerField)
             and isinstance(self.max_value.source_expressions[0], Substr)
         ):
-            zero_indexed_start = (
-                self.max_value.source_expressions[0].source_expressions[1].value - 1
+            zero_indexed_start: int = (
+                cast(Value, self.max_value.source_expressions[0].source_expressions[1]).value - 1
             )
             python_value = (
                 f'int({cls._meta.db_table}.'
-                + self.max_value.source_expressions[0].source_expressions[0].name
+                + cast(Substr, self.max_value.source_expressions[0].source_expressions[0]).name
                 + f'[{zero_indexed_start}:'
                 + str(
                     zero_indexed_start
-                    + self.max_value.source_expressions[0].source_expressions[2].value
+                    + cast(Value, self.max_value.source_expressions[0].source_expressions[2]).value
                 )
                 + '])'
             )
         else:
-            python_value = self.max_value
+            python_value = str(self.max_value)
         cls._meta.constraints.append(
             CheckConstraint(
                 condition=Q(**{f'{name}__lte': self.max_value}),
