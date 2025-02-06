@@ -34,6 +34,7 @@ CONTAINER_CODE_LENGTH = 1 + 2 + PREFIX_ID_LENGTH  # bottom row, right column
 
 CharField.register_lookup(Length)
 
+
 # type issue night be caused by ClusterableModel missing type annotations
 # https://github.com/typeddjango/django-stubs/issues/1023
 class Format(Model):  # type: ignore[django-manager-missing]
