@@ -4,10 +4,16 @@ build-backend = 'setuptools.build_meta'
 
 [project]
 classifiers = [
-    'Programming Language :: Python :: 3',
+    'Framework :: Django',
+    'Framework :: Wagtail',
+    'Intended Audience :: Healthcare Industry',
+    'Intended Audience :: Manufacturing',
+    'Intended Audience :: Science/Research',
     'License :: OSI Approved :: BSD License',
+    'Natural Language :: English',
     'Operating System :: OS Independent',
-    'Topic :: Internet :: WWW/HTTP :: Session',
+    'Programming Language :: Python :: 3',
+    'Typing :: Typed',
 ]
 description = 'Python Django models for liquid transfers'
 dependencies = ['django']
@@ -46,6 +52,7 @@ extend-select = ['D213'] # Beginning-end symmetry
 fixable = ['ALL']
 ignore = [
     'ANN101', # Deprecated and will be removed in a future release
+    'ANN401', # **kwargs: Any is reasonable
     'COM812', # Insists on join([],) over join([])
     'D105',   # __str__ does not need a docstring
     'D106',   # Nested class Meta does not need a docstring
@@ -65,7 +72,6 @@ ignore = [
     'TD002',   # The git log records who wrote a TODO line
     'TD003',   # Not planning use issues that heavily
     'TD004',   # A colon takes up space without really improving readability
-    'TD002',   # The git log records who wrote a TODO line
     'TRY002',  # Forces premature specialization; the right time to subclass is when the exception starts being caught
 ]
 select = ['ALL']

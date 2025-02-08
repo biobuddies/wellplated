@@ -116,7 +116,7 @@ LANGUAGE_CODE = 'en-us'
 
 TIME_ZONE = 'UTC'
 
-USE_I18N = False
+USE_I18N = False  # Less to test
 
 USE_TZ = True
 
@@ -124,6 +124,7 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/5.1/howto/static-files/
 
+STATIC_ROOT = str(BASE_DIR / 'static')
 STATIC_URL = str(BASE_DIR / 'static') + '/'
 MEDIA_ROOT = str(BASE_DIR / 'media')
 MEDIA_URL = '/media/'

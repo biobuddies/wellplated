@@ -1,17 +1,12 @@
 """Test the models"""
 
-from typing import TYPE_CHECKING
-
 from django.contrib.auth import get_user_model
 from django.db.utils import IntegrityError
 from pytest import mark, raises
+from pytest_django.fixtures import DjangoAssertNumQueries
+from pytest_mock import MockerFixture
 
-if TYPE_CHECKING:
-    from pytest_mock import MockerFixture
-
-    from wellplated.models import User
-
-from wellplated.models import Container, Format, Plan, Transfer, Well
+from wellplated.models import Container, Format, Plan, Transfer, User, Well
 
 
 def get_test_user() -> 'User':
@@ -26,18 +21,21 @@ def test_untracked_data() -> None:
 
     assert Container.objects.filter(code__in=('A01start0000000', 'A01end000000999')).count() == 2
 
-    assert (
-        Well.objects.filter(
-            container_code_label__in=('A01start0000000.A01', 'A01end000000999.A01')
-        ).count()
-        == 2
-    )
+    assert Well.objects.filter(container_id__in=('A01start0000000', 'A01end000000999')).count() == 2
 
-    assert Well.objects.start.label == 'A01'
-    assert Well.objects.end.label == 'A01'
 
-    assert Well.objects.start.container.format.purpose == 'start'
-    assert Well.objects.end.container.format.purpose == 'end'
+@mark.django_db
+def test_str(django_assert_num_queries: DjangoAssertNumQueries) -> None:
+    """__str__ methods must show useful information without causing extra queries."""
+    with django_assert_num_queries(1):
+        start_format = Format.objects.get(purpose='start')
+        assert str(start_format) == 'start'
+    with django_assert_num_queries(1):
+        start_container = Container.objects.get(format__pk=start_format.pk)
+        assert str(start_container) == 'start0000000'
+    with django_assert_num_queries(1):
+        start_well = Well.objects.get(container__pk=start_container.pk)
+        assert str(start_well) == 'start0000000.A01'
 
 
 @mark.django_db
@@ -94,6 +92,7 @@ def test_container_creation() -> None:
     Container.objects.bulk_create([Container(format=final_tube)])
     assert Container.objects.filter(format=final_tube).latest('pk').pk - first_new_container_pk == 2
 
+
 @mark.django_db
 def test_container_external_id() -> None:
     """Use external ID for container code when provided without sacrificing uniqueness."""
@@ -101,16 +100,17 @@ def test_container_external_id() -> None:
     f2 = Format.objects.create(prefix='t2', purpose='tube-two')
     f3 = Format.objects.create(prefix='t3', purpose='tube-three')
     c1 = Container.objects.create(format=f1)
-    c2 = Container.objects.create(format=f2, external_id=c1.pk)
-    c3 = Container.objects.create(format=f3, external_id=c1.pk)
+    _c2 = Container.objects.create(format=f2, external_id=c1.pk)
+    _c3 = Container.objects.create(format=f3, external_id=c1.pk)
     for code in Container.objects.filter(format__in={f1, f2, f3}).values_list('code', flat=True):
         assert int(code[5:]) == c1.pk
-    
+
     with raises(IntegrityError):
         Container.objects.create(format=f1, external_id=c1.pk)
 
+
 @mark.django_db
-def test_container_dot_well_label(mocker: 'MockerFixture') -> None:
+def test_container_dot_well_label(mocker: MockerFixture) -> None:
     """Containers must accept dot labels to access wells."""
     wip_tube = Container.objects.create(
         format=Format.objects.create(
@@ -118,29 +118,31 @@ def test_container_dot_well_label(mocker: 'MockerFixture') -> None:
         )
     )
     mock_wells = mocker.patch.object(Container, 'wells', autospec=True)
-    _ = wip_tube.A01  # top left
+    _ = wip_tube.A1  # top left without zero padding
+    _ = wip_tube.A01  # top left with zero padding
     _ = wip_tube.H12  # bottom right of 8 * 12 == 96-well plate
     _ = wip_tube.P24  # bottom right of 16 * 24 == 384-well plate
     assert mock_wells.method_calls == [
-        mocker.call.get(label='A01'),
-        mocker.call.get(label='H12'),
-        mocker.call.get(label='P24'),
+        mocker.call.get(row='A', column=1),
+        mocker.call.get(row='A', column=1),
+        mocker.call.get(row='H', column=12),
+        mocker.call.get(row='P', column=24),
     ]
 
 
 @mark.django_db
 @mark.parametrize(
-    ('bottom_row', 'right_column'),
-    [('@', 1), ('Q', 1), ('A', -1), ('A', 0), ('A', 25), ('A', 100), ('AA', 1)],
+    ('row', 'column'), [('@', 1), ('Q', 1), ('A', -1), ('A', 0), ('A', 25), ('A', 100), ('AA', 1)]
 )
-def test_well_creation_range(bottom_row: int, right_column: str) -> None:
+def test_well_creation_range(row: int, column: str) -> None:
     """Wells must stay in range."""
     with raises(IntegrityError):
         Well.objects.create(
             container=Container.objects.create(
                 format=Format.objects.create(prefix='pl', purpose='plate')
             ),
-            label=f'{bottom_row}{right_column:02}',
+            row=row,
+            column=column,
         )
 
 
@@ -148,9 +150,9 @@ def test_well_creation_range(bottom_row: int, right_column: str) -> None:
 def test_overlapping_well_creation() -> None:
     """Wells must not overlap."""
     plate = Container.objects.create(format=Format.objects.create(prefix='pl', purpose='plate'))
-    Well.objects.create(container=plate, label='A01')
+    Well.objects.create(container=plate, row='A', column=1)
     with raises(IntegrityError):
-        Well.objects.create(container=plate, label='A01')
+        Well.objects.create(container=plate, row='A', column=1)
 
 
 @mark.django_db
