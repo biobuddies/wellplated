@@ -6,6 +6,7 @@ Possible synonyms:
 * Coordinate
 * Label
 * Position
+* Row-column pair
 
 ## Source
 Possible synonyms:
