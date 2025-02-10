@@ -115,12 +115,20 @@ class Migration(migrations.Migration):
                         auto_created=True, primary_key=True, serialize=False, verbose_name='ID'
                     ),
                 ),
-                ('bottom_row', CheckedCharField(default='H', max_length=1)),
+                (
+                    'bottom_row',
+                    CheckedCharField(default='H', max_length=1, max_value='P', min_value='A'),
+                ),
                 (
                     'right_column',
                     CheckedPositiveSmallIntegerField(default=12, max_value=24, min_value=1),
                 ),
-                ('prefix', CheckedCharField(max_length=PREFIX_ID_LENGTH - 1, unique=True)),
+                (
+                    'prefix',
+                    CheckedCharField(
+                        max_length=PREFIX_ID_LENGTH - 1, min_length=0, omits='.', unique=True
+                    ),
+                ),
                 (
                     'bottom_right_prefix',
                     GeneratedField(
@@ -208,7 +216,10 @@ class Migration(migrations.Migration):
                         to_field='code',
                     ),
                 ),
-                ('row', CheckedCharField(max_length=1, min_length=1, min_value='A')),
+                (
+                    'row',
+                    CheckedCharField(max_length=1, max_value=Left('container', 1), min_value='A'),
+                ),
                 (
                     'column',
                     CheckedPositiveSmallIntegerField(
