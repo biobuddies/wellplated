@@ -112,12 +112,22 @@ AUTH_PASSWORD_VALIDATORS = [
 # Internationalization
 # https://docs.djangoproject.com/en/5.1/topics/i18n/
 
+# Display 24-hour time with short Z timezone/offset abbreviation
+# Use RFC 3339 ` ` space separator between date and time is over ISO 8601 `T` for easier reading
+# Seconds are probably unecessarily precise for in-vitro but relevant for in-silico
+DATETIME_FORMAT = SHORT_DATETIME_FORMAT = WAGTAIL_DATETIME_FORMAT = '%Y-%m-%d %H:%M:%SZ'
+DATE_FORMAT = SHORT_DATE_FORMAT = WAGTAIL_DATE_FORMAT = 'Y-m-d'
 LANGUAGE_CODE = 'en-us'
-
+TIME_FORMAT = WAGTAIL_TIME_FORMAT = '%H:%M:%SZ'
 TIME_ZONE = 'UTC'
-
-USE_I18N = False  # Less to test
-
+# Django's "InternationalizatioN" (I18N) setting is really about language translation; support for
+# different spellings of English, and different languages, would be welcome additions.
+USE_I18N = False
+# Django's "LocalizatioN" (L10N) setting is really about date and time formatting. The current goal
+# is to display in a single, globally-understandable format. Only if that proves impossible should
+# we resort to multiple formats. Support for multiple unambiguous input formats seems reasonable.
+# Support for ambiguous input formats might be left to downstream discretion.
+USE_L10N = False
 USE_TZ = True
 
 

@@ -1,4 +1,11 @@
-"""Models with database constraints, validators, and HTML5 attributes"""
+"""
+Models with consistent checks at every level
+
+1. Database CheckConstraints
+2. Python validators
+3. HTML5 constraint validation attributes
+   https://developer.mozilla.org/en-US/docs/Web/HTML/Constraint_validation
+"""
 
 from functools import partial
 from typing import Any, Self, cast
@@ -6,7 +13,7 @@ from typing import Any, Self, cast
 from django.db.models import CharField, CheckConstraint, Model, PositiveSmallIntegerField, Q, Value
 from django.db.models.functions import Cast, Left, Length, Substr
 from django.db.models.options import Options
-from django.forms import Field
+from django.forms import ChoiceField, Field
 
 CharField.register_lookup(Length)
 
@@ -39,6 +46,8 @@ class CheckedCharField(CharField):
 
         kwargs['max_length'] = max_length
         super().__init__(*args, **kwargs)
+        # TODO add validators for min_length, min_value, max_value, omits.
+        # CharField already has max_length
 
     @staticmethod
     def check_constraint(
@@ -104,12 +113,45 @@ class CheckedCharField(CharField):
         if self.omits:
             check('{value} not in {column}', invert=True, contains=self.omits)
 
-        def formfield(self: Self, form_class: type[Field], **kwargs: Any) -> Field | None:
-            kwargs['max_length'].setdefault(self.max_length)
-            kwargs['min_length'].setdefault(self.min_length)
+    def deconstruct(self) -> tuple:
+        """Include specified max_value and min_value."""
+        name, path, args, kwargs = super().deconstruct()
+        if self.max_length != 255:
+            kwargs['max_length'] = self.max_length
+        if self.max_value:
+            kwargs['max_value'] = self.max_value
+        if self.min_length != 1:
+            kwargs['min_length'] = self.min_length
+        if self.min_value:
+            kwargs['min_value'] = self.min_value
+        if self.omits:
+            kwargs['omits'] = self.omits
+        return name, path, args, kwargs
+
+    def formfield(
+        self: Self,
+        form_class: type[Field] | None = None,
+        choices_form_class: type[ChoiceField] | None = None,
+        **kwargs: Any,
+    ) -> Field | None:
+        """
+        Set length and regex pattern constraints.
+
+        CharField.formfield will copy self.max_length into kwargs, but not self.min_length.
+        It can't handle form_class, choices_form_class as positional arguments
+        """
+        defaults = {
+            'choices_form_class': choices_form_class,
+            'form_class': form_class,
+            'min_length': self.min_length,
+        }
+        if field := super().formfield(**{**defaults, **kwargs}):
             if self.max_length == self.min_length == 1 and self.max_value and self.min_value:
-                kwargs['pattern'] = f'[{self.min_value}-{self.max_value}]'
-            return super().formfield(form_class, **kwargs)
+                field.widget.attrs['pattern'] = f'[{self.min_value}-{self.max_value}]'
+            else:
+                field.widget.attrs['maxlength'] = self.max_length
+                field.widget.attrs['minlength'] = self.min_length
+        return field
 
 
 class CheckedPositiveSmallIntegerField(PositiveSmallIntegerField):
@@ -120,7 +162,13 @@ class CheckedPositiveSmallIntegerField(PositiveSmallIntegerField):
     min_value: int
 
     def __init__(
-        self, *args: Any, min_value: int = 0, max_value: Cast | int = 32767, **kwargs: Any
+        self: Self,
+        *args: Any,
+        # DatabaseOperations.integer_field_ranges['PositiveSmallIntegerField'][0] noqa: ERA001
+        min_value: int = 0,
+        # DatabaseOperations.integer_field_ranges['PositiveSmallIntegerField'][1] noqa: ERA001
+        max_value: Cast | int = 32767,
+        **kwargs: Any,
     ) -> None:
         """PostgreSQL smallint https://code.djangoproject.com/ticket/12030#comment:14"""
         self.max_value = max_value

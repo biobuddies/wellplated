@@ -160,7 +160,10 @@ def test_plan_and_transfers() -> None:
     """Test Plan and Transfer creation and relationships."""
     plan = Plan.objects.create(created_by=get_test_user())
     assert plan.created_by.username == 'test.user'
+    assert str(plan).startswith('plan ')
+
     transfer = Transfer.objects.create(plan=plan, source=Well.objects.start, sink=Well.objects.end)
     assert set(Well.objects.start.sinks.all()) == {Well.objects.end}
     assert set(Well.objects.end.sources.all()) == {Well.objects.start}
     assert plan.transfers.get() == transfer
+    assert str(transfer) == 'start0000000.A01 -> end000000999.A01'
