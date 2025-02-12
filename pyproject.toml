@@ -25,6 +25,9 @@ requires-python = '>=3.10'
 [project.urls]
 Homepage = 'https://github.com/biobuddies/wellplated'
 
+[tool.codespell]
+ignore-words-list = 'fro,trough'
+
 [tool.django-stubs]
 django_settings_module = 'demodj.settings'
 

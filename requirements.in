@@ -1,4 +1,7 @@
 # Pre-commit
+actionlint-py
+codespell
+cookiecutter
 django-stubs
 mypy
 pre-commit
