@@ -136,7 +136,10 @@ class Container(ClusterableModel):
 
     wells: Manager['Well']
 
-    def __getattr__(self, label: str) -> 'Well':
+    def __getattr__(self, label: str) -> 'Well | None':
+        if label in ('code', 'format'):
+            return None
+
         # ClusterableModel or other packages need an AttributeError for the following:
         # _cluster_related_objects
         # _prefetched_objects_cache
