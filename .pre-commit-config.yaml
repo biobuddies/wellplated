@@ -2,7 +2,7 @@ default_language_version:
     python: python3.12 # Using .python-version would be nice
 repos:
     - repo: https://github.com/biobuddies/helicopyter
-      rev: v2025.06.04
+      rev: v2025.07.02
       hooks:
           - id: actionlint
           - id: codespell
