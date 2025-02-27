@@ -137,17 +137,16 @@ class Container(ClusterableModel):
     wells: Manager['Well']
 
     def __getattr__(self, label: str) -> 'Well | None':
+        # These attributes seem to be added after __init__ but raising an AttributeError for them
+        # breaks the the Django admin and Wagtail manage interfaces.
         if label in ('code', 'format'):
             return None
 
-        # ClusterableModel or other packages need an AttributeError for the following:
-        # _cluster_related_objects
-        # _prefetched_objects_cache
-        # get_source_expressions
-        # resolve_expression
-
         label_match = LABEL_384.match(label)
         if not label_match or label_match.groupdict().keys() != {'row', 'column'}:
+            # ClusterableModel or other packages need an AttributeError for:
+            # _cluster_related_objects, _prefetched_objects_cache, get_source_expressions,
+            # resolve_expression
             raise AttributeError(f'Failed to parse {label}')  # noqa: TRY003
         column = int(label_match.groupdict()['column'], 10)
 
