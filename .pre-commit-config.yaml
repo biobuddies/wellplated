@@ -13,5 +13,10 @@ repos:
           - id: prettier-write
           - id: ruff-check-fix
           - id: ruff-format
-          - id: uv-pip-compile
           - id: yamllint
+    - repo: local
+      hooks:
+          - id: uv-pip-compile
+            entry: bash includes.sh upc
+            language: system
+            name: uv-pip-compile
