@@ -17,7 +17,7 @@ class FormatAdmin(ModelAdmin):
     readonly_fields = ('bottom_right_prefix', 'created_at')
 
     @property
-    def media(self):
+    def media(self) -> Media:
         return super().media + Media(css={'all': ['wellplated.css']})
 
 
