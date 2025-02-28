@@ -19,9 +19,9 @@ from django.db.models import (
     Value,
 )
 from django.db.models.functions import Cast, Coalesce, Concat, Left, Length, LPad, Substr
-from django_stubs_ext.db.models import TypedModelMeta
-from django.utils.html import format_html
 from django.templatetags.static import static
+from django.utils.html import format_html
+from django_stubs_ext.db.models import TypedModelMeta
 from modelcluster.fields import ParentalKey
 from modelcluster.models import ClusterableModel
 from wagtail import hooks
@@ -41,7 +41,9 @@ CharField.register_lookup(Length)
 @hooks.register('insert_global_admin_css')
 def global_admin_css() -> str:
     """Customize Wagtail admin Cascade Style Sheets (CSS)"""
-    return format_html('<link rel="stylesheet" href="{}">', static('wellplated/static/wellplated.css'))
+    return format_html(
+        '<link rel="stylesheet" href="{}">', static('wellplated/static/wellplated.css')
+    )
 
 
 # type issue night be caused by ClusterableModel missing type annotations
