@@ -20,8 +20,11 @@ from django.db.models import (
 )
 from django.db.models.functions import Cast, Coalesce, Concat, Left, Length, LPad, Substr
 from django_stubs_ext.db.models import TypedModelMeta
+from django.utils.html import format_html
+from django.templatetags.static import static
 from modelcluster.fields import ParentalKey
 from modelcluster.models import ClusterableModel
+from wagtail import hooks
 from wagtail.admin.panels import FieldPanel, InlinePanel
 from wagtail.snippets.models import register_snippet
 from wagtail.snippets.views.snippets import SnippetViewSet
@@ -33,6 +36,12 @@ PREFIX_ID_LENGTH = 12  # TODO make this configurable
 CONTAINER_CODE_LENGTH = 1 + 2 + PREFIX_ID_LENGTH  # bottom row, right column
 
 CharField.register_lookup(Length)
+
+
+@hooks.register('insert_global_admin_css')
+def global_admin_css() -> str:
+    """Customize Wagtail admin Cascade Style Sheets (CSS)"""
+    return format_html('<link rel="stylesheet" href="{}">', static('wellplated/static/wellplated.css'))
 
 
 # type issue night be caused by ClusterableModel missing type annotations
@@ -144,7 +153,8 @@ class Container(ClusterableModel):
 
         label_match = LABEL_384.match(label)
         if not label_match or label_match.groupdict().keys() != {'row', 'column'}:
-            # ClusterableModel or other packages need an AttributeError for:
+            # ClusterableModel (and maybe other code) catches AttributeError but not DoesNotExist.
+            # Observed with the following attributes:
             # _cluster_related_objects, _prefetched_objects_cache, get_source_expressions,
             # resolve_expression
             raise AttributeError(f'Failed to parse {label}')  # noqa: TRY003
