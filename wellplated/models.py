@@ -19,9 +19,12 @@ from django.db.models import (
     Value,
 )
 from django.db.models.functions import Cast, Coalesce, Concat, Left, Length, LPad, Substr
+from django.templatetags.static import static
+from django.utils.html import format_html
 from django_stubs_ext.db.models import TypedModelMeta
 from modelcluster.fields import ParentalKey
 from modelcluster.models import ClusterableModel
+from wagtail import hooks
 from wagtail.admin.panels import FieldPanel, InlinePanel
 from wagtail.snippets.models import register_snippet
 from wagtail.snippets.views.snippets import SnippetViewSet
@@ -33,6 +36,14 @@ PREFIX_ID_LENGTH = 12  # TODO make this configurable
 CONTAINER_CODE_LENGTH = 1 + 2 + PREFIX_ID_LENGTH  # bottom row, right column
 
 CharField.register_lookup(Length)
+
+
+@hooks.register('insert_global_admin_css')
+def global_admin_css() -> str:
+    """Customize Wagtail admin Cascade Style Sheets (CSS)"""
+    return format_html(
+        '<link rel="stylesheet" href="{}">', static('wellplated/static/wellplated.css')
+    )
 
 
 # type issue night be caused by ClusterableModel missing type annotations
@@ -136,15 +147,18 @@ class Container(ClusterableModel):
 
     wells: Manager['Well']
 
-    def __getattr__(self, label: str) -> 'Well':
-        # ClusterableModel or other packages need an AttributeError for the following:
-        # _cluster_related_objects
-        # _prefetched_objects_cache
-        # get_source_expressions
-        # resolve_expression
+    def __getattr__(self, label: str) -> 'Well | None':
+        # These attributes seem to be added after __init__ but raising an AttributeError for them
+        # breaks the the Django admin and Wagtail manage interfaces.
+        if label in ('code', 'format'):
+            return None
 
         label_match = LABEL_384.match(label)
         if not label_match or label_match.groupdict().keys() != {'row', 'column'}:
+            # ClusterableModel (and maybe other code) catches AttributeError but not DoesNotExist.
+            # Observed with the following attributes:
+            # _cluster_related_objects, _prefetched_objects_cache, get_source_expressions,
+            # resolve_expression
             raise AttributeError(f'Failed to parse {label}')  # noqa: TRY003
         column = int(label_match.groupdict()['column'], 10)
 

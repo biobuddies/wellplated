@@ -1,0 +1,7 @@
+:focus {
+    outline: 3px solid var(--link-hover-color);
+}
+
+:invalid {
+    outline: 3px solid var(--error-fg);
+}

@@ -112,9 +112,9 @@ AUTH_PASSWORD_VALIDATORS = [
 # Internationalization
 # https://docs.djangoproject.com/en/5.1/topics/i18n/
 
-# Display 24-hour time with short Z timezone/offset abbreviation
-# Use RFC 3339 ` ` space separator between date and time is over ISO 8601 `T` for easier reading
-# Seconds are probably unnecessarily precise for in-vitro but relevant for in-silico
+# Display 24-hour time with short Z timezone/offset abbreviation.
+# Use RFC 3339 ` ` space separator between date and time over ISO 8601 `T` for easier reading.
+# Seconds are probably unnecessarily precise for in-vitro but relevant for in-silico.
 DATETIME_FORMAT = SHORT_DATETIME_FORMAT = WAGTAIL_DATETIME_FORMAT = '%Y-%m-%d %H:%M:%SZ'
 DATE_FORMAT = SHORT_DATE_FORMAT = WAGTAIL_DATE_FORMAT = 'Y-m-d'
 LANGUAGE_CODE = 'en-us'

@@ -148,9 +148,14 @@ class CheckedCharField(CharField):
         if field := super().formfield(**{**defaults, **kwargs}):
             if self.max_length == self.min_length == 1 and self.max_value and self.min_value:
                 field.widget.attrs['pattern'] = f'[{self.min_value}-{self.max_value}]'
+                help_text = f'{self.min_length} letter{"" if self.min_length == 1 else "s"}'
             else:
                 field.widget.attrs['maxlength'] = self.max_length
                 field.widget.attrs['minlength'] = self.min_length
+                help_text = f'{self.min_length}..{self.max_length} letters'
+            if self.min_value and self.max_value:
+                help_text += f', {self.min_value}..{self.max_value}'
+            field.help_text = help_text
         return field
 
 
@@ -244,6 +249,8 @@ class CheckedPositiveSmallIntegerField(PositiveSmallIntegerField):
 
     def formfield(self, *_args: Any, **kwargs: Any) -> Field | None:
         """Set input min and max."""
-        return super().formfield(
+        if field := super().formfield(
             **{'min_value': self.min_value, 'max_value': self.max_value, **kwargs}
-        )
+        ):
+            field.help_text = f'number {self.min_value}..{self.max_value}'
+        return field
