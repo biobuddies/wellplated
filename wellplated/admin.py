@@ -1,23 +1,15 @@
-from django.contrib.admin import ModelAdmin, TabularInline, register
+from django.contrib.admin import TabularInline, ModelAdmin, register
 from django.forms import Media
 
-from wellplated.models import Container, Format, Well
-
+from wellplated.models import Format, Container, Well, Plan, Transfer
 
 @register(Format)
 class FormatAdmin(ModelAdmin):
-    list_display = (
-        'bottom_right_prefix',
-        'purpose',
-        'bottom_row',
-        'right_column',
-        'prefix',
-        'created_at',
-    )
-    readonly_fields = ('bottom_right_prefix', 'created_at')
+    list_display = ('bottom_right_prefix', 'purpose', 'bottom_row', 'right_column', 'prefix', 'created_at')
+    readonly_fields = ('bottom_right_prefix', 'created_at',)
 
     @property
-    def media(self) -> Media:
+    def media(self):
         return super().media + Media(css={'all': ['wellplated.css']})
 
 

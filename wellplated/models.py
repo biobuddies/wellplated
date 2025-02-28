@@ -22,6 +22,8 @@ from django.db.models.functions import Cast, Coalesce, Concat, Left, Length, LPa
 from django.templatetags.static import static
 from django.utils.html import format_html
 from django_stubs_ext.db.models import TypedModelMeta
+from django.utils.html import format_html
+from django.templatetags.static import static
 from modelcluster.fields import ParentalKey
 from modelcluster.models import ClusterableModel
 from wagtail import hooks
