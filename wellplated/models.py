@@ -155,7 +155,7 @@ class Container(ClusterableModel):
 
         label_match = LABEL_384.match(label)
         if not label_match or label_match.groupdict().keys() != {'row', 'column'}:
-            # ClusterableModel (and maybe other code) catches AttributeError but not DoesNotExist.
+            # ClusterableModel and maybe other code catches AttributeError but not DoesNotExist.
             # Observed with the following attributes:
             # _cluster_related_objects, _prefetched_objects_cache, get_source_expressions,
             # resolve_expression

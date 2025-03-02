@@ -110,8 +110,8 @@ def test_container_external_id() -> None:
 
 
 @mark.django_db
-def test_container_dot_well_label(mocker: MockerFixture) -> None:
-    """Containers must accept dot labels to access wells."""
+def test_container_dot_position(mocker: MockerFixture) -> None:
+    """Containers must accept attribute dot labels to access wells."""
     wip_tube = Container.objects.create(
         format=Format.objects.create(
             bottom_row='P', right_column=24, prefix='wip', purpose='work-in-process-tube'
@@ -129,6 +129,17 @@ def test_container_dot_well_label(mocker: MockerFixture) -> None:
         mocker.call.get(row='P', column=24),
     ]
 
+def test_container_dot_fields() -> None:
+    """Unset Container fields must return None."""
+    assert Container().code is None
+    assert Container().format is None
+
+def test_container_dot_methods() -> None:
+    """Missing Container methods must raise AttributeError."""
+    with raises(AttributeError):
+        Container().get_source_expressions()
+    with raises(AttributeError):
+        Container().resolve_expression()
 
 @mark.django_db
 @mark.parametrize(
