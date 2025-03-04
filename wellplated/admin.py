@@ -1,4 +1,3 @@
-from textwrap import dedent
 from typing import Self
 
 from django.contrib.admin import ModelAdmin, TabularInline, register

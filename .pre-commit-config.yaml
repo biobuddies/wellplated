@@ -2,21 +2,19 @@ default_language_version:
     python: python3.12 # Using .python-version would be nice
 repos:
     - repo: https://github.com/biobuddies/helicopyter
-      rev: v2025.07.02
+      rev: v2025.08.01
       hooks:
+          # Auto-fix and -generate first, so reported line numbers match working tree
           - id: actionlint
           - id: codespell
           - id: cookiecutter
-          - id: dot-yaml
           - id: includes-sh
-          - id: mypy
           - id: prettier-write
           - id: ruff-check-fix
           - id: ruff-format
-          - id: yamllint
-    - repo: local
-      hooks:
           - id: uv-pip-compile
-            entry: bash includes.sh upc
-            language: system
-            name: uv-pip-compile
+          # Lint-only second, so reported line numbers match working tree
+          - id: dot-yaml
+          - id: yamllint
+          # mypy last because it's so slow
+          - id: mypy

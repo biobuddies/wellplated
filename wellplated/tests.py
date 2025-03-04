@@ -129,17 +129,28 @@ def test_container_dot_position(mocker: MockerFixture) -> None:
         mocker.call.get(row='P', column=24),
     ]
 
+
 def test_container_dot_fields() -> None:
-    """Unset Container fields must return None."""
+    """
+    Unset Container fields must return None.
+
+    This keeps the Django admin and Wagtail manage interfaces happy.
+    """
     assert Container().code is None
     assert Container().format is None
 
+
 def test_container_dot_methods() -> None:
-    """Missing Container methods must raise AttributeError."""
+    """
+    Missing Container methods must raise AttributeError.
+
+    This keeps ClusterableModel happy.
+    """
     with raises(AttributeError):
-        Container().get_source_expressions()
+        Container().get_source_expressions()  # type: ignore[misc,operator]
     with raises(AttributeError):
-        Container().resolve_expression()
+        Container().resolve_expression()  # type: ignore[misc,operator]
+
 
 @mark.django_db
 @mark.parametrize(
