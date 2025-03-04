@@ -8,12 +8,13 @@ Models with consistent checks at every level
 """
 
 from functools import partial
-from typing import Any, Self, cast
+from typing import Any, Self, Sequence, cast
 
 from django.db.models import CharField, CheckConstraint, Model, PositiveSmallIntegerField, Q, Value
 from django.db.models.functions import Cast, Left, Length, Substr
 from django.db.models.options import Options
 from django.forms import ChoiceField, Field
+from django.forms.widgets import Widget
 
 CharField.register_lookup(Length)
 
@@ -156,6 +157,7 @@ class CheckedCharField(CharField):
             if self.min_value and self.max_value:
                 help_text += f', {self.min_value}..{self.max_value}'
             field.help_text = help_text
+            field.widget.attrs['x-model'] = self.attname
         return field
 
 
@@ -253,4 +255,5 @@ class CheckedPositiveSmallIntegerField(PositiveSmallIntegerField):
             **{'min_value': self.min_value, 'max_value': self.max_value, **kwargs}
         ):
             field.help_text = f'number {self.min_value}..{self.max_value}'
+            field.widget.attrs['x-model'] = self.attname
         return field

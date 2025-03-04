@@ -6,6 +6,7 @@ from typing import ClassVar, Self
 from django.contrib.auth.models import User
 from django.db.models import (
     PROTECT,
+    BooleanField,
     CharField,
     DateTimeField,
     ForeignKey,
@@ -77,7 +78,7 @@ class Format(Model):  # type: ignore[django-manager-missing]
     # in its own GeneratedFields, and Well can ForeignKey and constrain on them.
     bottom_right_prefix = GeneratedField(
         db_persist=True,
-        editable=False,
+        #editable=False,
         expression=Concat(
             'bottom_row', LPad(Cast('right_column', CharField()), 2, Value('0')), 'prefix'
         ),
@@ -86,6 +87,8 @@ class Format(Model):  # type: ignore[django-manager-missing]
         ),
         unique=True,
     )
+    
+    attribute_example = 'Attribute example'
 
     created_at = DateTimeField(auto_now_add=True)
 

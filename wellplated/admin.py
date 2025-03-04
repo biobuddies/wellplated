@@ -2,6 +2,8 @@ from typing import Self
 
 from django.contrib.admin import ModelAdmin, TabularInline, register
 from django.forms import Media
+from django.http import HttpRequest, HttpResponse
+from django.template.response import TemplateResponse
 from django.utils.safestring import SafeText
 
 from wellplated.models import Container, Format, Well
@@ -9,6 +11,7 @@ from wellplated.models import Container, Format, Well
 
 @register(Format)
 class FormatAdmin(ModelAdmin):
+    change_form_template = 'change_form.html.j2'
     list_display = (
         'bottom_right_prefix',
         'purpose',
@@ -17,7 +20,21 @@ class FormatAdmin(ModelAdmin):
         'prefix',
         'created_at',
     )
-    readonly_fields = ('diagram', 'bottom_right_prefix', 'created_at')
+    readonly_fields = ('diagram', 'my_bottom_right_prefix', 'bottom_right_prefix', 'created_at')
+    
+    
+    def my_bottom_right_prefix(self: Self, instance: Format) -> SafeText:
+        """
+        div with database value, plus alpinejs to provide a client-side preview
+        of the GeneratedField, which concatenates bottom_row, right_column, and prefix
+        """
+        print('covdebug')
+        html = '<div>'
+        for field in ('bottom_row', 'right_column', 'prefix'):
+            html += f'<span x-text="{field}">{getattr(instance, field)}</span>'
+        return SafeText(
+            html + '</div>'
+        )
 
     def diagram(self: Self, instance: Format) -> SafeText:
         style = 'style="text-align: center; text-transform: none; vertical-align: middle;"'
@@ -40,7 +57,8 @@ class FormatAdmin(ModelAdmin):
 
     @property
     def media(self) -> Media:
-        return super().media + Media(css={'all': ['wellplated.css']})
+        # TODO set defer attribute for alpinejs
+        return super().media + Media(css={'all': ['wellplated.css']}, js=['//unpkg.com/alpinejs'])
 
 
 class WellInline(TabularInline):
