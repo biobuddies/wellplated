@@ -156,7 +156,6 @@ class CheckedCharField(CharField):
             if self.min_value and self.max_value:
                 help_text += f', {self.min_value}..{self.max_value}'
             field.help_text = help_text
-            field.widget.attrs['x-model'] = self.attname
         return field
 
 
@@ -254,5 +253,4 @@ class CheckedPositiveSmallIntegerField(PositiveSmallIntegerField):
             **{'min_value': self.min_value, 'max_value': self.max_value, **kwargs}
         ):
             field.help_text = f'number {self.min_value}..{self.max_value}'
-            field.widget.attrs['x-model'] = self.attname
         return field
