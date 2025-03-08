@@ -6,6 +6,7 @@ from typing import ClassVar, Self
 from django.contrib.auth.models import User
 from django.db.models import (
     PROTECT,
+    BooleanField,
     CharField,
     DateTimeField,
     ForeignKey,
@@ -46,7 +47,7 @@ def global_admin_css() -> str:
     )
 
 
-# type issue night be caused by ClusterableModel missing type annotations
+# type issue might be caused by ClusterableModel missing type annotations
 # https://github.com/typeddjango/django-stubs/issues/1023
 class Format(Model):  # type: ignore[django-manager-missing]
     """
@@ -77,7 +78,7 @@ class Format(Model):  # type: ignore[django-manager-missing]
     # in its own GeneratedFields, and Well can ForeignKey and constrain on them.
     bottom_right_prefix = GeneratedField(
         db_persist=True,
-        # editable=False,
+        editable=False,
         expression=Concat(
             'bottom_row', LPad(Cast('right_column', CharField()), 2, Value('0')), 'prefix'
         ),
@@ -86,8 +87,6 @@ class Format(Model):  # type: ignore[django-manager-missing]
         ),
         unique=True,
     )
-
-    attribute_example = 'Attribute example'
 
     created_at = DateTimeField(auto_now_add=True)
 
@@ -189,7 +188,7 @@ class Position(Model):
     One of multiple positions on a plate, or the singular position of a vial, tube, or trough.
 
     Positions are stored and displayed in "Battleship notation" with alphabetical row and
-    numerical column. For easy sorting and consistent length, the former is one characting
+    numerical column. For easy sorting and consistent length, the former is one character
     beginning with `A`, and the latter is zero padded two digits beginning with `01`.
 
     1-well   vial/tube/trough position  A01
@@ -264,7 +263,7 @@ class Transfer(Model):
     Movement from one position to another.
 
     The same (source, sink) may appear multiple times in the same plan to enable transferring
-    a volume exceeding pipette or tip size.
+    a volume exceeding the pipette or tip size.
 
     The same (source, sink) may appear in multiple plans to enable multiple rounds of
     liquid transfer and drying.
