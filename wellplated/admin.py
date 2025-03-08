@@ -4,11 +4,12 @@ from django.contrib.admin import ModelAdmin, TabularInline, register
 from django.forms import Media
 from django.utils.safestring import SafeText
 
-from wellplated.models import Container, Format, Well
+from wellplated.models import Container, Format, Position
 
 
 @register(Format)
 class FormatAdmin(ModelAdmin):
+    change_form_template = 'change_form.html.j2'
     list_display = (
         'bottom_right_prefix',
         'purpose',
@@ -40,16 +41,16 @@ class FormatAdmin(ModelAdmin):
 
     @property
     def media(self) -> Media:
-        return super().media + Media(css={'all': ['wellplated.css']})
+        return super().media + Media(css={'all': ['wellplated.css']}) 
 
 
-class WellInline(TabularInline):
-    model = Well
+class PositionInline(TabularInline):
+    model = Position
     extra = 0
 
 
 @register(Container)
 class ContainerAdmin(ModelAdmin):
-    inlines = (WellInline,)
+    inlines = (PositionInline,)
     list_display = ('code', 'format', 'created_at')
     readonly_fields = ('code', 'created_at')
