@@ -110,8 +110,8 @@ def test_container_external_id() -> None:
 
 
 @mark.django_db
-def test_container_dot_well_label(mocker: MockerFixture) -> None:
-    """Containers must accept dot labels to access wells."""
+def test_container_dot_position(mocker: MockerFixture) -> None:
+    """Containers must accept attribute dot labels to access wells."""
     wip_tube = Container.objects.create(
         format=Format.objects.create(
             bottom_row='P', right_column=24, prefix='wip', purpose='work-in-process-tube'
@@ -128,6 +128,28 @@ def test_container_dot_well_label(mocker: MockerFixture) -> None:
         mocker.call.get(row='H', column=12),
         mocker.call.get(row='P', column=24),
     ]
+
+
+def test_container_dot_fields() -> None:
+    """
+    Unset Container fields must return None.
+
+    This keeps the Django admin and Wagtail manage interfaces happy.
+    """
+    assert Container().code is None
+    assert Container().format is None
+
+
+def test_container_dot_methods() -> None:
+    """
+    Missing Container methods must raise AttributeError.
+
+    This keeps ClusterableModel happy.
+    """
+    with raises(AttributeError):
+        Container().get_source_expressions()  # type: ignore[misc,operator]
+    with raises(AttributeError):
+        Container().resolve_expression()  # type: ignore[misc,operator]
 
 
 @mark.django_db
