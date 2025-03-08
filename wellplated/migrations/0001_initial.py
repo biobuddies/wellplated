@@ -60,15 +60,15 @@ def constrain_models() -> list[migrations.AddConstraint]:
                 'wellplated_container.external_id <= 99999999999',
                 Q(external_id__lte=int('9' * (PREFIX_ID_LENGTH - 1))),
             ),
-            ('len(wellplated_well.row) == 1', Q(row__length=1)),
-            ("wellplated_well.row >= 'A'", Q(row__gte='A')),
+            ('len(wellplated_position.row) == 1', Q(row__length=1)),
+            ("wellplated_position.row >= 'A'", Q(row__gte='A')),
             (
-                'wellplated_well.row <= wellplated_well.container[:1]',
+                'wellplated_position.row <= wellplated_position.container[:1]',
                 Q(row__lte=Left('container', 1)),
             ),
-            ('wellplated_well.column >= 1', Q(column__gte=1)),
+            ('wellplated_position.column >= 1', Q(column__gte=1)),
             (
-                'wellplated_well.column <= int(wellplated_well.container[1:3])',
+                'wellplated_position.column <= int(wellplated_position.container[1:3])',
                 Q(column__lte=Cast(Substr('container', 2, 2), PositiveSmallIntegerField())),
             ),
         )
@@ -77,7 +77,7 @@ def constrain_models() -> list[migrations.AddConstraint]:
             constraint=UniqueConstraint(
                 fields=('container', 'row', 'column'), name='unique_container_row_column'
             ),
-            model_name='well',
+            model_name='position',
         )
     ]
 
@@ -96,8 +96,8 @@ def create_untracked(apps: state.StateApps, _schema_editor: BaseDatabaseSchemaEd
                 bottom_row='A', right_column=1, prefix=purpose, purpose=purpose
             ),
         )
-        container.wells.add(apps.get_model('wellplated', 'Well')(row='A', column=1))
-        container.wells.commit()
+        container.positions.add(apps.get_model('wellplated', 'Position')(row='A', column=1))
+        container.positions.commit()
 
 
 class Migration(migrations.Migration):
@@ -197,7 +197,7 @@ class Migration(migrations.Migration):
             options={'abstract': False},
         ),
         migrations.CreateModel(
-            name='Well',
+            name='Position',
             fields=[
                 (
                     'id',
@@ -211,7 +211,7 @@ class Migration(migrations.Migration):
                         db_column='container_code',
                         editable=False,
                         on_delete=PROTECT,
-                        related_name='wells',
+                        related_name='positions',
                         to='wellplated.container',
                         to_field='code',
                     ),
@@ -262,15 +262,18 @@ class Migration(migrations.Migration):
                     'plan',
                     ForeignKey(on_delete=PROTECT, related_name='transfers', to='wellplated.plan'),
                 ),
-                ('source', ForeignKey(on_delete=PROTECT, related_name='+', to='wellplated.well')),
-                ('sink', ForeignKey(on_delete=PROTECT, related_name='+', to='wellplated.well')),
+                (
+                    'source',
+                    ForeignKey(on_delete=PROTECT, related_name='+', to='wellplated.position'),
+                ),
+                ('sink', ForeignKey(on_delete=PROTECT, related_name='+', to='wellplated.position')),
             ],
         ),
         migrations.AddField(
-            model_name='well',
+            model_name='position',
             name='sinks',
             field=ManyToManyField(
-                related_name='sources', through='wellplated.Transfer', to='wellplated.well'
+                related_name='sources', through='wellplated.Transfer', to='wellplated.position'
             ),
         ),
     )

@@ -2,11 +2,9 @@ from typing import Self
 
 from django.contrib.admin import ModelAdmin, TabularInline, register
 from django.forms import Media
-from django.http import HttpRequest, HttpResponse
-from django.template.response import TemplateResponse
 from django.utils.safestring import SafeText
 
-from wellplated.models import Container, Format, Well
+from wellplated.models import Container, Format, Position
 
 
 @register(Format)
@@ -21,8 +19,7 @@ class FormatAdmin(ModelAdmin):
         'created_at',
     )
     readonly_fields = ('diagram', 'my_bottom_right_prefix', 'bottom_right_prefix', 'created_at')
-    
-    
+
     def my_bottom_right_prefix(self: Self, instance: Format) -> SafeText:
         """
         div with database value, plus alpinejs to provide a client-side preview
@@ -32,9 +29,7 @@ class FormatAdmin(ModelAdmin):
         html = '<div>'
         for field in ('bottom_row', 'right_column', 'prefix'):
             html += f'<span x-text="{field}">{getattr(instance, field)}</span>'
-        return SafeText(
-            html + '</div>'
-        )
+        return SafeText(html + '</div>')
 
     def diagram(self: Self, instance: Format) -> SafeText:
         style = 'style="text-align: center; text-transform: none; vertical-align: middle;"'
@@ -61,13 +56,13 @@ class FormatAdmin(ModelAdmin):
         return super().media + Media(css={'all': ['wellplated.css']}, js=['//unpkg.com/alpinejs'])
 
 
-class WellInline(TabularInline):
-    model = Well
+class PositionInline(TabularInline):
+    model = Position
     extra = 0
 
 
 @register(Container)
 class ContainerAdmin(ModelAdmin):
-    inlines = (WellInline,)
+    inlines = (PositionInline,)
     list_display = ('code', 'format', 'created_at')
     readonly_fields = ('code', 'created_at')

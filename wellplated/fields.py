@@ -8,13 +8,12 @@ Models with consistent checks at every level
 """
 
 from functools import partial
-from typing import Any, Self, Sequence, cast
+from typing import Any, Self, cast
 
 from django.db.models import CharField, CheckConstraint, Model, PositiveSmallIntegerField, Q, Value
 from django.db.models.functions import Cast, Left, Length, Substr
 from django.db.models.options import Options
 from django.forms import ChoiceField, Field
-from django.forms.widgets import Widget
 
 CharField.register_lookup(Length)
 
