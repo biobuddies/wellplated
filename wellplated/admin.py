@@ -9,7 +9,6 @@ from wellplated.models import Container, Format, Position
 
 @register(Format)
 class FormatAdmin(ModelAdmin):
-    change_form_template = 'change_form.html.j2'
     list_display = (
         'bottom_right_prefix',
         'purpose',
