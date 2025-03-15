@@ -6,7 +6,6 @@ from typing import ClassVar, Self
 from django.contrib.auth.models import User
 from django.db.models import (
     PROTECT,
-    BooleanField,
     CharField,
     DateTimeField,
     ForeignKey,

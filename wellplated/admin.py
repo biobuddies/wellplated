@@ -41,7 +41,7 @@ class FormatAdmin(ModelAdmin):
 
     @property
     def media(self) -> Media:
-        return super().media + Media(css={'all': ['wellplated.css']}) 
+        return super().media + Media(css={'all': ['wellplated.css']})
 
 
 class PositionInline(TabularInline):
