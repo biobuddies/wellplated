@@ -31,7 +31,7 @@ from wagtail.snippets.views.snippets import SnippetViewSet
 
 from wellplated.fields import CheckedCharField, CheckedPositiveSmallIntegerField
 
-LABEL_384 = compile(r'^(?P<row>[A-P])(?P<column>[012]?[0-9])$')
+POSITIONS_384 = compile(r'^(?P<row>[A-P])(?P<column>[012]?[0-9])$')
 PREFIX_ID_LENGTH = 12  # TODO make this configurable
 CONTAINER_CODE_LENGTH = 1 + 2 + PREFIX_ID_LENGTH  # bottom row, right column
 
@@ -46,7 +46,7 @@ def global_admin_css() -> str:
     )
 
 
-# type issue night be caused by ClusterableModel missing type annotations
+# type issue might be caused by ClusterableModel missing type annotations
 # https://github.com/typeddjango/django-stubs/issues/1023
 class Format(Model):  # type: ignore[django-manager-missing]
     """
@@ -68,7 +68,7 @@ class Format(Model):  # type: ignore[django-manager-missing]
     prefix = CheckedCharField(
         max_length=PREFIX_ID_LENGTH - 1,
         min_length=0,
-        omits='.',  # Dot/period separates Container serial code from Well label
+        omits='.',  # Dot/period separates Container serial code from Well position
         unique=True,
     )
 
@@ -90,7 +90,7 @@ class Format(Model):  # type: ignore[django-manager-missing]
     created_at = DateTimeField(auto_now_add=True)
 
     # Optimization: variable length fields last
-    purpose = TextField(blank=False, unique=True)  # How the contents of wells should be interpreted
+    purpose = TextField(blank=False, unique=True)  # How contents should be interpreted
     # TODO forms.fields.TextField(min_length=1)
 
     def __str__(self) -> str:
@@ -109,7 +109,7 @@ register_snippet(Format, FormatViewSet)
 
 @register_snippet
 class Container(ClusterableModel):
-    """A Container is uniquely identified by its serial code and has Wells"""
+    """A Container is uniquely identified by its serial code and has Positions"""
 
     external_id = CheckedPositiveSmallIntegerField(
         blank=True, default=None, max_value=int('9' * (PREFIX_ID_LENGTH - 1)), null=True
@@ -142,58 +142,59 @@ class Container(ClusterableModel):
     panels = (
         FieldPanel('created_at', read_only=True),
         FieldPanel('format', read_only=True),
-        InlinePanel('wells'),
+        InlinePanel('positions'),
     )
 
-    wells: Manager['Well']
+    positions: Manager['Position']
 
-    def __getattr__(self, label: str) -> 'Well | None':
+    def __getattr__(self, position: str) -> 'Position | None':
         # These attributes seem to be added after __init__ but raising an AttributeError for them
         # breaks the the Django admin and Wagtail manage interfaces.
-        if label in ('code', 'format'):
+        if position in ('code', 'format'):
             return None
 
-        label_match = LABEL_384.match(label)
-        if not label_match or label_match.groupdict().keys() != {'row', 'column'}:
+        position_match = POSITIONS_384.match(position)
+        if not position_match or position_match.groupdict().keys() != {'row', 'column'}:
             # ClusterableModel and maybe other code catches AttributeError but not DoesNotExist.
             # Observed with the following attributes:
             # _cluster_related_objects, _prefetched_objects_cache, get_source_expressions,
             # resolve_expression
-            raise AttributeError(f'Failed to parse {label}')  # noqa: TRY003
-        column = int(label_match.groupdict()['column'], 10)
+            raise AttributeError(f'Failed to parse {position}')  # noqa: TRY003
+        column = int(position_match.groupdict()['column'], 10)
 
-        return self.wells.get(row=label_match.groupdict()['row'], column=column)
+        return self.positions.get(row=position_match.groupdict()['row'], column=column)
 
     def __str__(self) -> str:
         return self.code[1 + 2 :]  # row, column
 
 
-class WellManager(Manager['Well']):
-    """Customize Well.objects."""
+class PositionManager(Manager['Position']):
+    """Customize Position.objects."""
 
     @property
-    def start(self) -> 'Well':
-        """Return the special infinite source well."""
+    def start(self) -> 'Position':
+        """Return the special infinite source position."""
         return self.get(container='A01start0000000', row='A', column=1)
 
     @property
-    def end(self) -> 'Well':
-        """Return the special infinite sink well."""
+    def end(self) -> 'Position':
+        """Return the special infinite sink position."""
         return self.get(container='A01end000000999', row='A', column=1)
 
 
-class Well(Model):
+class Position(Model):
     """
-    One of multiple positions on a plate, or the singular position of a tube.
+    One of multiple positions on a plate, or the singular position of a vial, tube, or trough.
 
-    Positions are stored and displayed as "Battleship notation" labels with alphabetical row and
-    numerical column, the latter zero-padded for easy sorting and consistent length.
+    Positions are stored and displayed in "Battleship notation" with alphabetical row and
+    numerical column. For easy sorting and consistent length, the former is one character
+    beginning with `A`, and the latter is zero padded two digits beginning with `01`.
 
-    1-well   tube/trough  coordinate is   A01
-    6-well   plate coordinates range from A01 to B03
-    24-well  plate coordinates range from A01 to D06
-    96-well  plate coordinates range from A01 to H12
-    384-well plate coordinates range from A01 to P24
+    1-well   vial/tube/trough position  A01
+    6-well   plate positions range from A01 to B03
+    24-well  plate positions range from A01 to D06
+    96-well  plate positions range from A01 to H12
+    384-well plate positions range from A01 to P24
     """
 
     container = ParentalKey(
@@ -201,7 +202,7 @@ class Well(Model):
         db_column='container_code',
         editable=False,
         on_delete=PROTECT,
-        related_name='wells',
+        related_name='positions',
         to_field='code',
     )
     row = CheckedCharField(
@@ -219,7 +220,7 @@ class Well(Model):
         related_name='sources',
     )
 
-    objects = WellManager()
+    objects = PositionManager()
 
     class Meta(TypedModelMeta):
         constraints: ClassVar = [
@@ -258,7 +259,7 @@ class Plan(Model):
 @register_snippet
 class Transfer(Model):
     """
-    Transfer from one well to another.
+    Movement from one position to another.
 
     The same (source, sink) may appear multiple times in the same plan to enable transferring
     a volume exceeding the pipette or tip size.
@@ -268,8 +269,8 @@ class Transfer(Model):
     """
 
     plan = ForeignKey(Plan, on_delete=PROTECT, related_name='transfers')
-    source = ForeignKey(Well, on_delete=PROTECT, related_name='+')
-    sink = ForeignKey(Well, on_delete=PROTECT, related_name='+')
+    source = ForeignKey(Position, on_delete=PROTECT, related_name='+')
+    sink = ForeignKey(Position, on_delete=PROTECT, related_name='+')
 
     def __str__(self) -> str:
         return f'{self.source} -> {self.sink}'

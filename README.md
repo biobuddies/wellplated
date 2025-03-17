@@ -5,7 +5,7 @@ Python Django models for liquid in plates and tubes
 For planning what should happen, with strong constraints, and tracking what actually happened.
 
 ## Features
-* Prevent out-of-range well rows and columns
+* Prevent out-of-range rows and columns
 * Generate identifying codes (ready to be printed out as barcodes)
 * Record externally generated barcodes (track pre-barcoded tubes and plates)
 

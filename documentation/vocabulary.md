@@ -1,12 +1,13 @@
 Consistent use of clear, short words should make wellplated easy to understand.
 This document maps chosen terms (heading) to possible alternatives (list items).
 
-## Well
+## Position
+A tube has a position in a rack, a well has a position in a plate.
 Possible synonyms:
 * Coordinate
 * Label
-* Position
-* Row-column pair
+* Well
+* Row-column pair/2-tuple
 
 ## Source
 Possible synonyms:
@@ -72,7 +73,7 @@ https://www.accessdata.fda.gov/scripts/cdrh/cfdocs/cfcfr/CFRSearch.cfm?fr=210.3 
 * Unit
 * Gang-printed labeling
 
-https://www.accessdata.fda.gov/scripts/cdrh/cfdocs/cfcfr/CFRSearch.cfm?CFRPart=211&showFR=1&subpartNode=21:4.0.1.1.11.2
+https://www.ecfr.gov/current/title-21/section-211.22
 * Production records
 * Laboratory facilities
 * Testing
@@ -91,7 +92,7 @@ https://www.accessdata.fda.gov/scripts/cdrh/cfdocs/cfcfr/CFRSearch.cfm?fr=600.3
 * Label
 * Specification
 
-https://www.accessdata.fda.gov/scripts/cdrh/cfdocs/cfcfr/CFRSearch.cfm?CFRPart=211&showFR=1&subpartNode=21:4.0.1.1.11.3
+https://www.ecfr.gov/current/title-21/section-211.42
 * Mixups
 * Flow of ... in-process materials ...
 * Operations

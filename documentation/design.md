@@ -13,12 +13,15 @@ We should keep in mind the risk reduction benefits of graduating software from 1
 testing, to 2. RUO production use, feedback, and software iteration, to 3. CGMP production use.
 
 ## Models
-### Containers
-To support plates, a `Container` models a two-dimensional matrix of `Well`s. Tubes are treated as
-a degenerate case with a single row and a single column. For easy checking, the coordinate system
-matches what is commonly molded onto plates, with a character for the row and a number for the
-column. Zero padding to a uniform width is performed to make sorting exported data easy, for
-tidy display.
+### Container
+To support plates, a `Container` models a two-dimensional matrix of `Position`s. Treat individual
+tubes as a simple or "degenerate" case with one row and one column. When multiple tubes are held in
+one or more physical racks, holders, or fixtures, they can be treated as one logical `Container`
+with rows and columns convenient multiples of the physical racks.
+
+For easy checking, the coordinate system matches the "Battleship notation" commonly molded onto
+plates, with a character for the row and a number for the column. Zero padding to a uniform width
+makes sorting exported data easy, and keeps displays tidy.
 
 To avoid mixups, each `Container` is assigned a unique alphanumberic human and machine readable
 identifier called `code`. It is designed to support the following physical labeling:
@@ -28,30 +31,27 @@ identifier called `code`. It is designed to support the following physical label
 * Printing and sticking a barcode representation of the letters and numbers to the `Container`
 * Scanning pre-barcoded `Containers` and recording their values in the database
 
-Tubes in a rack can be modeled as many single-`Well` `Container`s. This is a good choice when
-the tubes are only in this arrangement for one workflow step. If helpful, information about the
-rack can be recorded in related `Plan` or `Result` objects.
+### Format
+The number of rows and columns in a `Container`, and intended usage and code prefix, define a
+`Format`.
 
-Tubes in a rack can also be modeled as one multi-`Well` `Container`. This is a good choice when
-the tubes remain in the same arrangement for multiple workflow steps. If helpful, information
-about the tubes, such as tube-specific barcodes, can be be recorded in related `Plan` or `Result`
-objects.
 
+### System Limits
 Separate models per `Format`, and a unified model with separately incrementing numbers per prefix,
 were considered, but the code complexity of those approaches seems unwarranted. The first model to
-overflow will probably be `Well`. The maximum value for BigAutoField is 9223372036854775807. If
-`Well`s were fully populated, 9223372036854775807 // 384 == 24019198012642645 (17 digits)
-`Containers` would be supported. If `Well`s are sparsely populated and plates have 384
+overflow will probably be `Position`. The maximum value for BigAutoField is 9223372036854775807. If
+`Position`s were fully populated, 9223372036854775807 // 384 == 24019198012642645 (17 digits)
+`Containers` would be supported. If `Positions`s are sparsely populated and plates have 384
 or fewer wells, then the limit is a bit higher.
 
 Horizontal space for printing barcodes might be more limiting than database integer size. To start
-with, the maximum allowed width is twelve characters. A more end-to-end check would be to generate
+with, the maximum allowed `code` width is twelve characters. A more end-to-end check would be to generate
 a label and check that everything fits, but wellplated does not yet include label generation.
 
 While resource exhaustion is a common failure mode, it is easy to track and forecast. TODO: extend
 django-healthcheck for AutoField/BigAutoField exhaustion, somewhat similar to free disk space.
 
-#### Future Work
+#### Large Plates
 Plates with double-character (more than 26) rows are not yet supported because of open questions.
 
 https://web.archive.org/web/20210506171929/http://mscreen.lsi.umich.edu/mscreenwiki/index.php/COORDINATE
@@ -74,4 +74,4 @@ Some plates appear to have physical molding assigning four wells at a time to a 
 https://shop.gbo.com/en/usa/products/bioscience/microplates/1536-well-microplates/
 I'm guessing then that AA1, AB2, ..., HC47, HD48 would describe the diagonal.
 
-Should only one of these be supported? Should both be supported?
+Should only one of these be supported? Should both be supported? Are there other conventions?
