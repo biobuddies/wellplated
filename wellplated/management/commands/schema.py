@@ -16,8 +16,6 @@ class Command(BaseCommand):
         print(f'Generating {output}')
         # sqlparse.format doesn't do a good enough job
         # Temporarily commenting out unsigned works around https://github.com/sqlfluff/sqlfluff/issues/6844
-        if settings.DATABASES['default']['NAME'] != 'db.sqlite3':
-            raise Exception(f"Unsure how to handle {settings.DATABASES['default']['NAME']=}")
         raw = (
             check_output(  # noqa: S603
                 ('sqlite3', 'db.sqlite3', '.schema wellplated_*')
