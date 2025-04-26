@@ -98,12 +98,12 @@ filelock==3.16.1
     # via virtualenv
 filetype==1.2.0
     # via willow
+id==1.5.0
+    # via twine
 identify==2.6.1
     # via pre-commit
 idna==3.10
     # via requests
-importlib-metadata==8.5.0
-    # via twine
 iniconfig==2.0.0
     # via pytest
 ipython==8.31.0
@@ -157,6 +157,7 @@ packaging==24.1
     # via
     #   build
     #   pytest
+    #   twine
 parso==0.8.4
     # via jedi
 pathspec==0.12.1
@@ -171,8 +172,6 @@ pillow==10.4.0
     #   wagtail
 pillow-heif==0.18.0
     # via willow
-pkginfo==1.10.0
-    # via twine
 platformdirs==4.3.6
     # via
     #   sqlfluff
@@ -233,6 +232,7 @@ regex==2024.11.6
 requests==2.32.3
     # via
     #   cookiecutter
+    #   id
     #   requests-toolbelt
     #   twine
     #   wagtail
@@ -272,7 +272,7 @@ traitlets==5.14.3
     # via
     #   ipython
     #   matplotlib-inline
-twine==5.1.1
+twine==6.1.0
     # via -r requirements.in
 types-python-dateutil==2.9.0.20241206
     # via arrow
@@ -299,5 +299,3 @@ willow==1.8.0
     # via wagtail
 yamllint==1.35.1
     # via -r requirements.in
-zipp==3.20.2
-    # via importlib-metadata
