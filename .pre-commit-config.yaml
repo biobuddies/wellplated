@@ -18,3 +18,9 @@ repos:
           - id: yamllint
           # mypy last because it's so slow
           - id: mypy
+    - repo: local
+      hooks:
+          - id: schema
+            name: schema
+            entry: bash -c 'python -m manage migrate && python -m manage schema'
+            language: system
