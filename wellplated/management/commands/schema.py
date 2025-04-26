@@ -1,5 +1,6 @@
 from pathlib import Path
 from subprocess import check_output
+from typing import Any
 
 from django.conf import settings
 from django.core.management.base import BaseCommand
@@ -8,15 +9,19 @@ from sqlfluff.core.config import FluffConfig
 
 
 class Command(BaseCommand):
-    """Export SQLite schema"""
+    help = """Export SQLite schema"""
 
-    def handle(self, *args, **options):
+    def handle(self, *_args: Any, **_kwargs: Any) -> None:
         output = Path(__file__).parent.parent.parent / 'models.sql'
         print(f'Generating {output}')
         # sqlparse.format doesn't do a good enough job
         # Temporarily commenting out unsigned works around https://github.com/sqlfluff/sqlfluff/issues/6844
+        if settings.DATABASES['default']['NAME'] != 'db.sqlite3':
+            raise Exception(f"Unsure how to handle {settings.DATABASES['default']['NAME']=}")
         raw = (
-            check_output(('sqlite3', settings.DATABASES['default']['NAME'], '.schema wellplated_*'))
+            check_output(  # noqa: S603
+                ('sqlite3', 'db.sqlite3', '.schema wellplated_*')
+            )
             .decode()
             .replace('unsigned', '/*unsigned*/')
         )

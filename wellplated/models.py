@@ -159,7 +159,7 @@ class Container(ClusterableModel):
             # Observed with the following attributes:
             # _cluster_related_objects, _prefetched_objects_cache, get_source_expressions,
             # resolve_expression
-            raise AttributeError(f'Failed to parse {position}')  # noqa: TRY003
+            raise AttributeError(f'Failed to parse {position}')
         column = int(position_match.groupdict()['column'], 10)
 
         return self.positions.get(row=position_match.groupdict()['row'], column=column)

@@ -76,6 +76,7 @@ ignore = [
     'TD003',   # Not planning use issues that heavily
     'TD004',   # A colon takes up space without really improving readability
     'TRY002',  # Forces premature specialization; the right time to subclass is when the exception starts being caught
+    'TRY003',  # Forces premature specialization; the right time to subclass is when the exception starts being caught
 ]
 select = ['ALL']
 
@@ -90,6 +91,7 @@ split-on-trailing-comma = false
 '**/__init__.py' = ['D104']
 'wellplated/admin.py' = ['D']
 'wellplated/migrations/*.py' = ['D']
+'wellplated/management/commands/*.py' = ['D', 'T201']
 
 [tool.ruff.lint.pydocstyle]
 convention = 'numpy' # Pretty arbitrary choice
