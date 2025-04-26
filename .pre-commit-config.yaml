@@ -21,6 +21,8 @@ repos:
     - repo: local
       hooks:
           - id: schema
-            name: schema
             entry: bash -c 'python -m manage migrate && python -m manage schema'
             language: system
+            name: schema
+            stages:
+                - manual
