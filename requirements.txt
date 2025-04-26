@@ -25,13 +25,20 @@ cffi==1.17.1
 cfgv==3.4.0
     # via pre-commit
 chardet==5.2.0
-    # via binaryornot
+    # via
+    #   binaryornot
+    #   diff-cover
+    #   sqlfluff
 charset-normalizer==3.3.2
     # via requests
 click==8.1.8
-    # via cookiecutter
+    # via
+    #   cookiecutter
+    #   sqlfluff
 codespell==2.4.1
     # via -r requirements.in
+colorama==0.4.6
+    # via sqlfluff
 cookiecutter==2.6.0
     # via -r requirements.in
 coverage==7.6.8
@@ -42,6 +49,8 @@ decorator==5.1.1
     # via ipython
 defusedxml==0.7.1
     # via willow
+diff-cover==9.2.4
+    # via sqlfluff
 distlib==0.3.8
     # via virtualenv
 django==5.1.1
@@ -112,7 +121,10 @@ jeepney==0.8.0
     #   keyring
     #   secretstorage
 jinja2==3.1.5
-    # via cookiecutter
+    # via
+    #   cookiecutter
+    #   diff-cover
+    #   sqlfluff
 keyring==25.4.1
     # via twine
 l18n==2021.3
@@ -148,7 +160,9 @@ packaging==24.1
 parso==0.8.4
     # via jedi
 pathspec==0.12.1
-    # via yamllint
+    # via
+    #   sqlfluff
+    #   yamllint
 pexpect==4.9.0
     # via ipython
 pillow==10.4.0
@@ -160,9 +174,13 @@ pillow-heif==0.18.0
 pkginfo==1.10.0
     # via twine
 platformdirs==4.3.6
-    # via virtualenv
+    # via
+    #   sqlfluff
+    #   virtualenv
 pluggy==1.5.0
-    # via pytest
+    # via
+    #   diff-cover
+    #   pytest
 pre-commit==3.8.0
     # via -r requirements.in
 prompt-toolkit==3.0.48
@@ -173,8 +191,9 @@ pure-eval==0.2.3
     # via stack-data
 pycparser==2.22
     # via cffi
-pygments==2.18.0
+pygments==2.19.1
     # via
+    #   diff-cover
     #   ipython
     #   readme-renderer
     #   rich
@@ -186,6 +205,7 @@ pytest==8.3.3
     #   pytest-cov
     #   pytest-django
     #   pytest-mock
+    #   sqlfluff
 pytest-cov==6.0.0
     # via -r requirements.in
 pytest-django==4.9.0
@@ -204,9 +224,12 @@ pyyaml==6.0.2
     # via
     #   cookiecutter
     #   pre-commit
+    #   sqlfluff
     #   yamllint
 readme-renderer==44.0
     # via twine
+regex==2024.11.6
+    # via sqlfluff
 requests==2.32.3
     # via
     #   cookiecutter
@@ -231,14 +254,20 @@ six==1.16.0
     #   python-dateutil
 soupsieve==2.6
     # via beautifulsoup4
+sqlfluff==3.4.0
+    # via -r requirements.in
 sqlparse==0.5.1
     # via django
 stack-data==0.6.3
     # via ipython
+tblib==3.1.0
+    # via sqlfluff
 telepath==0.3.1
     # via wagtail
 text-unidecode==1.3
     # via python-slugify
+tqdm==4.67.1
+    # via sqlfluff
 traitlets==5.14.3
     # via
     #   ipython

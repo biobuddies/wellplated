@@ -1,8 +1,7 @@
 {
     "name": "wellplated",
-    "devDependencies": {},
-    "dependencies": {
-        "prettier": "^3.3.3",
+    "devDependencies": {
+        "prettier": "^3.5.3",
         "prettier-plugin-toml": "^2.0.1"
     }
 }

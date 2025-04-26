@@ -98,3 +98,8 @@ convention = 'numpy' # Pretty arbitrary choice
 packages = ['wellplated']
 
 [tool.setuptools_scm]
+
+[tool.sqlfluff.core]
+dialect = 'sqlite'
+max_line_length = 100
+output_line_length = 100
