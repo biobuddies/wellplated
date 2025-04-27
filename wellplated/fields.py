@@ -84,7 +84,7 @@ class CheckedCharField(CharField):
             CheckConstraint(
                 condition=condition,
                 name=message.format(column=f'{meta.db_table}.{name}', value=python_value),
-            )
+            ),
         ]
 
     def contribute_to_class(self, cls: type[Model], name: str, private_only: bool = False) -> None:  # noqa: FBT001, FBT002
@@ -210,7 +210,7 @@ class CheckedPositiveSmallIntegerField(PositiveSmallIntegerField):
             CheckConstraint(
                 condition=Q(**{f'{name}__gte': self.min_value}),
                 name=f'{cls._meta.db_table}.{name} >= {self.min_value}',
-            )
+            ),
         ]
         if (
             isinstance(self.max_value, Cast)
@@ -239,7 +239,7 @@ class CheckedPositiveSmallIntegerField(PositiveSmallIntegerField):
             CheckConstraint(
                 condition=Q(**{f'{name}__lte': self.max_value}),
                 name=f'{cls._meta.db_table}.{name} <= {python_value}',
-            )
+            ),
         ]
 
     def deconstruct(self) -> tuple:
