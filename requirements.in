@@ -10,6 +10,7 @@ pytest-cov
 pytest-django
 pytest-mock
 ruff
+sqlfluff
 uv
 yamllint
 

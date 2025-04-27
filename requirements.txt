@@ -12,39 +12,48 @@ asgiref==3.8.1
     #   django-stubs
 asttokens==3.0.0
     # via stack-data
-beautifulsoup4==4.12.3
+beautifulsoup4==4.13.4
     # via wagtail
 binaryornot==0.4.4
     # via cookiecutter
-build==1.2.2
+build==1.2.2.post1
     # via -r requirements.in
-certifi==2024.8.30
+certifi==2025.4.26
     # via requests
 cffi==1.17.1
     # via cryptography
 cfgv==3.4.0
     # via pre-commit
 chardet==5.2.0
-    # via binaryornot
-charset-normalizer==3.3.2
+    # via
+    #   binaryornot
+    #   diff-cover
+    #   sqlfluff
+charset-normalizer==3.4.1
     # via requests
 click==8.1.8
-    # via cookiecutter
+    # via
+    #   cookiecutter
+    #   sqlfluff
 codespell==2.4.1
     # via -r requirements.in
+colorama==0.4.6
+    # via sqlfluff
 cookiecutter==2.6.0
     # via -r requirements.in
-coverage==7.6.8
+coverage==7.8.0
     # via pytest-cov
-cryptography==43.0.1
+cryptography==44.0.2
     # via secretstorage
-decorator==5.1.1
+decorator==5.2.1
     # via ipython
 defusedxml==0.7.1
     # via willow
-distlib==0.3.8
+diff-cover==9.2.4
+    # via sqlfluff
+distlib==0.3.9
     # via virtualenv
-django==5.1.1
+django==5.2
     # via
     #   -r requirements.in
     #   wellplated (pyproject.toml)
@@ -55,69 +64,77 @@ django==5.1.1
     #   django-stubs
     #   django-stubs-ext
     #   django-taggit
+    #   django-tasks
     #   django-treebeard
     #   djangorestframework
     #   laces
     #   wagtail
-django-extensions==3.2.3
+django-extensions==4.1
     # via -r requirements.in
-django-filter==24.3
+django-filter==25.1
     # via wagtail
-django-modelcluster==6.3
+django-modelcluster==6.4
     # via wagtail
 django-permissionedforms==0.1
     # via wagtail
-django-stubs==5.1.1
+django-stubs==5.2.0
     # via -r requirements.in
-django-stubs-ext==5.1.1
-    # via django-stubs
-django-taggit==5.0.1
+django-stubs-ext==5.2.0
+    # via
+    #   django-stubs
+    #   django-tasks
+django-taggit==6.1.0
+    # via wagtail
+django-tasks==0.6.1
     # via wagtail
 django-treebeard==4.7.1
     # via wagtail
-djangorestframework==3.15.2
+djangorestframework==3.16.0
     # via wagtail
 docutils==0.21.2
     # via readme-renderer
-draftjs-exporter==5.0.0
+draftjs-exporter==5.1.0
     # via wagtail
-et-xmlfile==1.1.0
+et-xmlfile==2.0.0
     # via openpyxl
-executing==2.1.0
+executing==2.2.0
     # via stack-data
-filelock==3.16.1
+filelock==3.18.0
     # via virtualenv
 filetype==1.2.0
     # via willow
-identify==2.6.1
+id==1.5.0
+    # via twine
+identify==2.6.10
     # via pre-commit
 idna==3.10
     # via requests
-importlib-metadata==8.5.0
-    # via twine
-iniconfig==2.0.0
+iniconfig==2.1.0
     # via pytest
-ipython==8.31.0
+ipython==9.2.0
     # via -r requirements.in
+ipython-pygments-lexers==1.1.1
+    # via ipython
 jaraco-classes==3.4.0
     # via keyring
 jaraco-context==6.0.1
     # via keyring
-jaraco-functools==4.0.2
+jaraco-functools==4.1.0
     # via keyring
 jedi==0.19.2
     # via ipython
-jeepney==0.8.0
+jeepney==0.9.0
     # via
     #   keyring
     #   secretstorage
-jinja2==3.1.5
-    # via cookiecutter
-keyring==25.4.1
+jinja2==3.1.6
+    # via
+    #   cookiecutter
+    #   diff-cover
+    #   sqlfluff
+keyring==25.6.0
     # via twine
-l18n==2021.3
-    # via wagtail
-laces==0.1.1
+laces==0.1.2
     # via wagtail
 markdown-it-py==3.0.0
     # via rich
@@ -127,45 +144,50 @@ matplotlib-inline==0.1.7
     # via ipython
 mdurl==0.1.2
     # via markdown-it-py
-more-itertools==10.5.0
+more-itertools==10.7.0
     # via
     #   jaraco-classes
     #   jaraco-functools
-mypy==1.11.2
+mypy==1.15.0
     # via -r requirements.in
-mypy-extensions==1.0.0
+mypy-extensions==1.1.0
     # via mypy
-nh3==0.2.18
+nh3==0.2.21
     # via readme-renderer
 nodeenv==1.9.1
     # via pre-commit
 openpyxl==3.1.5
     # via wagtail
-packaging==24.1
+packaging==25.0
     # via
     #   build
     #   pytest
+    #   twine
 parso==0.8.4
     # via jedi
 pathspec==0.12.1
-    # via yamllint
+    # via
+    #   sqlfluff
+    #   yamllint
 pexpect==4.9.0
     # via ipython
-pillow==10.4.0
+pillow==11.2.1
     # via
     #   pillow-heif
     #   wagtail
-pillow-heif==0.18.0
+pillow-heif==0.21.0
     # via willow
-pkginfo==1.10.0
-    # via twine
-platformdirs==4.3.6
-    # via virtualenv
+platformdirs==4.3.7
+    # via
+    #   sqlfluff
+    #   virtualenv
 pluggy==1.5.0
-    # via pytest
-pre-commit==3.8.0
+    # via
+    #   diff-cover
+    #   pytest
+pre-commit==4.2.0
     # via -r requirements.in
-prompt-toolkit==3.0.48
+prompt-toolkit==3.0.51
     # via ipython
 ptyprocess==0.7.0
     # via pexpect
@@ -173,22 +195,25 @@ pure-eval==0.2.3
     # via stack-data
 pycparser==2.22
     # via cffi
-pygments==2.18.0
+pygments==2.19.1
     # via
+    #   diff-cover
     #   ipython
+    #   ipython-pygments-lexers
     #   readme-renderer
     #   rich
-pyproject-hooks==1.1.0
+pyproject-hooks==1.2.0
     # via build
-pytest==8.3.3
+pytest==8.3.5
     # via
     #   -r requirements.in
     #   pytest-cov
     #   pytest-django
     #   pytest-mock
-pytest-cov==6.0.0
+    #   sqlfluff
+pytest-cov==6.1.1
     # via -r requirements.in
-pytest-django==4.9.0
+pytest-django==4.11.1
     # via -r requirements.in
 pytest-mock==3.14.0
     # via -r requirements.in
@@ -196,20 +221,20 @@ python-dateutil==2.9.0.post0
     # via arrow
 python-slugify==8.0.4
     # via cookiecutter
-pytz==2024.2
-    # via
-    #   django-modelcluster
-    #   l18n
 pyyaml==6.0.2
     # via
     #   cookiecutter
     #   pre-commit
+    #   sqlfluff
     #   yamllint
 readme-renderer==44.0
     # via twine
+regex==2024.11.6
+    # via sqlfluff
 requests==2.32.3
     # via
     #   cookiecutter
+    #   id
     #   requests-toolbelt
     #   twine
     #   wagtail
@@ -217,58 +242,62 @@ requests-toolbelt==1.0.0
     # via twine
 rfc3986==2.0.0
     # via twine
-rich==13.8.1
+rich==14.0.0
     # via
     #   cookiecutter
     #   twine
-ruff==0.6.8
+ruff==0.11.7
     # via -r requirements.in
 secretstorage==3.3.3
     # via keyring
-six==1.16.0
-    # via
-    #   l18n
-    #   python-dateutil
-soupsieve==2.6
+six==1.17.0
+    # via python-dateutil
+soupsieve==2.7
     # via beautifulsoup4
-sqlparse==0.5.1
+sqlfluff==3.4.0
+    # via -r requirements.in
+sqlparse==0.5.3
     # via django
 stack-data==0.6.3
     # via ipython
+tblib==3.1.0
+    # via sqlfluff
 telepath==0.3.1
     # via wagtail
 text-unidecode==1.3
     # via python-slugify
+tqdm==4.67.1
+    # via sqlfluff
 traitlets==5.14.3
     # via
     #   ipython
     #   matplotlib-inline
-twine==5.1.1
+twine==6.1.0
     # via -r requirements.in
 types-python-dateutil==2.9.0.20241206
     # via arrow
-types-pyyaml==6.0.12.20241230
+types-pyyaml==6.0.12.20250402
     # via django-stubs
-typing-extensions==4.12.2
+typing-extensions==4.13.2
     # via
+    #   beautifulsoup4
     #   django-stubs
     #   django-stubs-ext
+    #   django-tasks
     #   mypy
-urllib3==2.2.3
+urllib3==2.4.0
     # via
     #   requests
     #   twine
-uv==0.4.16
+uv==0.6.17
     # via -r requirements.in
-virtualenv==20.26.5
+virtualenv==20.30.0
     # via pre-commit
-wagtail==6.2.2
+wagtail==6.4.1
     # via -r requirements.in
 wcwidth==0.2.13
     # via prompt-toolkit
-willow==1.8.0
+willow==1.10.0
     # via wagtail
-yamllint==1.35.1
+yamllint==1.37.0
     # via -r requirements.in
-zipp==3.20.2
-    # via importlib-metadata

@@ -1,6 +1,6 @@
 """Database tables (Models) and columns (Fields) for liquid in plates and tubes"""
 
-from re import compile
+import re
 from typing import ClassVar, Self
 
 from django.contrib.auth.models import User
@@ -31,7 +31,7 @@ from wagtail.snippets.views.snippets import SnippetViewSet
 
 from wellplated.fields import CheckedCharField, CheckedPositiveSmallIntegerField
 
-POSITIONS_384 = compile(r'^(?P<row>[A-P])(?P<column>[012]?[0-9])$')
+POSITIONS_384 = re.compile(r'^(?P<row>[A-P])(?P<column>[012]?[0-9])$')
 PREFIX_ID_LENGTH = 12  # TODO make this configurable
 CONTAINER_CODE_LENGTH = 1 + 2 + PREFIX_ID_LENGTH  # bottom row, right column
 
@@ -159,7 +159,7 @@ class Container(ClusterableModel):
             # Observed with the following attributes:
             # _cluster_related_objects, _prefetched_objects_cache, get_source_expressions,
             # resolve_expression
-            raise AttributeError(f'Failed to parse {position}')  # noqa: TRY003
+            raise AttributeError(f'Failed to parse {position}')
         column = int(position_match.groupdict()['column'], 10)
 
         return self.positions.get(row=position_match.groupdict()['row'], column=column)
@@ -230,7 +230,7 @@ class Position(Model):
         ]
 
     def __str__(self) -> str:
-        return f'{self.container_id[1 + 2:]}.{self.row}{self.column:02}'  # row, column
+        return f'{self.container_id[1 + 2 :]}.{self.row}{self.column:02}'  # row, column
 
 
 @register_snippet

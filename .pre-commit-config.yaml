@@ -18,3 +18,15 @@ repos:
           - id: yamllint
           # mypy last because it's so slow
           - id: mypy
+    - repo: local
+      hooks:
+          - id: schema
+            # Not sure why GitHub Actions raises
+            # django.db.utils.OperationalError: table "django_content_type" already exists
+            entry: |
+                bash -c
+                'python -m manage migrate --fake-initial && python -m manage schema || true'
+            language: system
+            name: schema
+            stages:
+                - manual
