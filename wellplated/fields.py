@@ -73,18 +73,19 @@ class CheckedCharField(CharField):
             condition = ~condition
 
         if isinstance(sql_value, Left):
-            right_side_column = cast(Left, sql_value.source_expressions[0]).name
-            length = cast(Value, sql_value.source_expressions[1]).value
+            right_side_column = cast('Left', sql_value.source_expressions[0]).name
+            length = cast('Value', sql_value.source_expressions[1]).value
             python_value = f'{meta.db_table}.{right_side_column}[:{length}]'
         else:
             python_value = repr(sql_value)
 
-        meta.constraints.append(
+        meta.constraints = [
+            *meta.constraints,
             CheckConstraint(
                 condition=condition,
                 name=message.format(column=f'{meta.db_table}.{name}', value=python_value),
             )
-        )
+        ]
 
     def contribute_to_class(self, cls: type[Model], name: str, private_only: bool = False) -> None:  # noqa: FBT001, FBT002
         """
@@ -204,38 +205,42 @@ class CheckedPositiveSmallIntegerField(PositiveSmallIntegerField):
             # Ensure ModelState.from_model() considers constraints
             cls._meta.original_attrs['constraints'] = []
 
-        cls._meta.constraints.append(
+        cls._meta.constraints = [
+            *cls._meta.constraints,
             CheckConstraint(
                 condition=Q(**{f'{name}__gte': self.min_value}),
                 name=f'{cls._meta.db_table}.{name} >= {self.min_value}',
             )
-        )
+        ]
         if (
             isinstance(self.max_value, Cast)
             and isinstance(self.max_value.output_field, PositiveSmallIntegerField)
             and isinstance(self.max_value.source_expressions[0], Substr)
         ):
             zero_indexed_start: int = (
-                cast(Value, self.max_value.source_expressions[0].source_expressions[1]).value - 1
+                cast('Value', self.max_value.source_expressions[0].source_expressions[1]).value - 1
             )
             python_value = (
                 f'int({cls._meta.db_table}.'
-                + cast(Substr, self.max_value.source_expressions[0].source_expressions[0]).name
+                + cast('Substr', self.max_value.source_expressions[0].source_expressions[0]).name
                 + f'[{zero_indexed_start}:'
                 + str(
                     zero_indexed_start
-                    + cast(Value, self.max_value.source_expressions[0].source_expressions[2]).value
+                    + cast(
+                        'Value', self.max_value.source_expressions[0].source_expressions[2]
+                    ).value
                 )
                 + '])'
             )
         else:
             python_value = str(self.max_value)
-        cls._meta.constraints.append(
+        cls._meta.constraints = [
+            *cls._meta.constraints,
             CheckConstraint(
                 condition=Q(**{f'{name}__lte': self.max_value}),
                 name=f'{cls._meta.db_table}.{name} <= {python_value}',
             )
-        )
+        ]
 
     def deconstruct(self) -> tuple:
         """Omit calculated max_length and include specified max_value and min_value."""
