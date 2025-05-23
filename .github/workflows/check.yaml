@@ -5,7 +5,8 @@ jobs:
         steps:
             - uses: actions/checkout@v4
             - run: source .biobuddies/includes.bash forceready
-            - run: source .biobuddies/includes.bash && a && pcam --color always --show-diff-on-failure
+            - run: |
+                  source .biobuddies/includes.bash && a && pcam --color always --show-diff-on-failure
             - run: .venv/bin/python -m manage check
             - run: |
                   .venv/bin/python -m pytest --cov=wellplated --cov-report=term-missing:skip-covered

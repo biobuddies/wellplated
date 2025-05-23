@@ -16,7 +16,7 @@ classifiers = [
     'Typing :: Typed',
 ]
 description = 'Python Django models for liquid transfers'
-dependencies = ['django', 'django-extensions']
+dependencies = ['django', 'django-extensions', 'wagtail']
 dynamic = ['version']
 name = 'wellplated'
 readme = 'README.md'
@@ -39,11 +39,7 @@ precommit = [
     # uv from asdf
     'yamllint',
 ]
-build = [
-    'build',
-    'ipython',
-    'twine',
-]
+build = ['build', 'ipython', 'twine']
 
 [project.urls]
 Homepage = 'https://github.com/biobuddies/wellplated'
