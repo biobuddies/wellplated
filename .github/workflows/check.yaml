@@ -4,17 +4,8 @@ jobs:
         runs-on: ubuntu-latest
         steps:
             - uses: actions/checkout@v4
-
-            - uses: actions/setup-node@v4
-              with:
-                  cache: npm
-                  node-version-file: .nvmrc
-            - run: npm install --frozen-lockfile
-
-            - uses: astral-sh/setup-uv@v5
-            - run: uv venv && bash includes.sh ups
-
-            - run: source includes.sh && a && pcam --color always --show-diff-on-failure
+            - run: source .biobuddies/includes.bash forceready
+            - run: source .biobuddies/includes.bash && a && pcam --color always --show-diff-on-failure
             - run: .venv/bin/python -m manage check
             - run: |
                   .venv/bin/python -m pytest --cov=wellplated --cov-report=term-missing:skip-covered
@@ -25,7 +16,7 @@ jobs:
         runs-on: ubuntu-latest
         steps:
             - uses: actions/checkout@v4
-            - run: bash includes.sh summarize
+            - run: bash .biobuddies/includes.bash summarize
 
 on: # yamllint disable-line rule:truthy
     - pull_request
