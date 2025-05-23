@@ -19,15 +19,7 @@ from django.db.models import (
     Value,
 )
 from django.db.models.functions import Cast, Coalesce, Concat, Left, Length, LPad, Substr
-from django.templatetags.static import static
-from django.utils.html import format_html
 from django_stubs_ext.db.models import TypedModelMeta
-from modelcluster.fields import ParentalKey
-from modelcluster.models import ClusterableModel
-from wagtail import hooks
-from wagtail.admin.panels import FieldPanel, InlinePanel
-from wagtail.snippets.models import register_snippet
-from wagtail.snippets.views.snippets import SnippetViewSet
 
 from wellplated.fields import CheckedCharField, CheckedPositiveSmallIntegerField
 
@@ -36,34 +28,25 @@ PREFIX_ID_LENGTH = 12  # TODO make this configurable
 CONTAINER_CODE_LENGTH = 1 + 2 + PREFIX_ID_LENGTH  # bottom row, right column
 
 CharField.register_lookup(Length)
+Range = range
 
 
-@hooks.register('insert_global_admin_css')
-def global_admin_css() -> str:
-    """Customize Wagtail admin Cascade Style Sheets (CSS)"""
-    return format_html(
-        '<link rel="stylesheet" href="{}">', static('wellplated/static/wellplated.css')
-    )
-
-
-# type issue might be caused by ClusterableModel missing type annotations
-# https://github.com/typeddjango/django-stubs/issues/1023
 class Format(Model):  # type: ignore[django-manager-missing]
     """
-    Rows, columns, and planned usage
+    Rows, columns, and planned usage for Container
 
     Bottom (maximum) row character and right (maximum) column number are currently set for
-    16*24 == 384-well plates. Up to 26 rows ('Z') and 32767 columns would be easy to support if
-    anyone has a need. documentation/design.md discusses possibilities and questions for
-    32*48 == 1536-well plate support.
+    (ord('P')-64==16)*24 == 384-well plates. Up to ord('Z')-64==26 rows and 32767
+    columns would be easy to support if anyone has a need. documentation/design.md discusses
+    possibilities and questions for 32*48 == 1536-well plate support.
     """
 
-    # Rows must range between 'A' and this (inclusive); default to H for 8*12 96-well plate
+    # Default to (ord('A')-64==1)*1 == 1 for tubes
     bottom_row = CheckedCharField(
-        default='H', max_length=1, max_value='P', min_length=1, min_value='A'
+        default='A', max_length=1, max_value='P', min_length=1, min_value='A'
     )
-    # Columns must range between 1 and this (inclusive); default to 12 for 8*12 96-well plate
-    right_column = CheckedPositiveSmallIntegerField(default=12, min_value=1, max_value=24)
+    # Default to 1 for tubes
+    right_column = CheckedPositiveSmallIntegerField(default=1, min_value=1, max_value=24)
 
     prefix = CheckedCharField(
         max_length=PREFIX_ID_LENGTH - 1,
@@ -97,18 +80,7 @@ class Format(Model):  # type: ignore[django-manager-missing]
         return self.prefix
 
 
-class FormatViewSet(SnippetViewSet):
-    """Customize /manage/snippets/wellplated/format interface"""
-
-    model = Format
-    list_display = ('bottom_right_prefix', 'purpose', 'bottom_row', 'right_column', 'prefix')
-
-
-register_snippet(Format, FormatViewSet)
-
-
-@register_snippet
-class Container(ClusterableModel):
+class Container(Model):
     """A Container is uniquely identified by its serial code and has Positions"""
 
     external_id = CheckedPositiveSmallIntegerField(
@@ -137,12 +109,6 @@ class Container(ClusterableModel):
         on_delete=PROTECT,
         related_name='containers',
         to_field='bottom_right_prefix',
-    )
-
-    panels = (
-        FieldPanel('created_at', read_only=True),
-        FieldPanel('format', read_only=True),
-        InlinePanel('positions'),
     )
 
     positions: Manager['Position']
@@ -197,7 +163,7 @@ class Position(Model):
     384-well plate positions range from A01 to P24
     """
 
-    container = ParentalKey(
+    container = ForeignKey(
         Container,
         db_column='container_code',
         editable=False,
@@ -233,7 +199,6 @@ class Position(Model):
         return f'{self.container_id[1 + 2 :]}.{self.row}{self.column:02}'  # row, column
 
 
-@register_snippet
 class Plan(Model):
     """
     A set of transfers describing what should happen.
@@ -256,7 +221,6 @@ class Plan(Model):
         return f'plan {self.pk}'
 
 
-@register_snippet
 class Transfer(Model):
     """
     Movement from one position to another.

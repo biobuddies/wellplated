@@ -44,19 +44,6 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'django_extensions',
-    'wagtail.contrib.forms',
-    'wagtail.contrib.redirects',
-    'wagtail.embeds',
-    'wagtail.sites',
-    'wagtail.users',
-    'wagtail.snippets',
-    'wagtail.documents',
-    'wagtail.images',
-    'wagtail.search',
-    'wagtail.admin',
-    'wagtail',
-    'modelcluster',
-    'taggit',
     'wellplated',
 ]
 
@@ -68,7 +55,6 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
-    'wagtail.contrib.redirects.middleware.RedirectMiddleware',
 ]
 
 ROOT_URLCONF = 'demodj.urls'
@@ -115,10 +101,10 @@ AUTH_PASSWORD_VALIDATORS = [
 # Display 24-hour time with short Z timezone/offset abbreviation.
 # Use RFC 3339 ` ` space separator between date and time over ISO 8601 `T` for easier reading.
 # Seconds are probably unnecessarily precise for in-vitro but relevant for in-silico.
-DATETIME_FORMAT = SHORT_DATETIME_FORMAT = WAGTAIL_DATETIME_FORMAT = '%Y-%m-%d %H:%M:%SZ'
-DATE_FORMAT = SHORT_DATE_FORMAT = WAGTAIL_DATE_FORMAT = 'Y-m-d'
+DATETIME_FORMAT = SHORT_DATETIME_FORMAT = '%Y-%m-%d %H:%M:%SZ'
+DATE_FORMAT = SHORT_DATE_FORMAT = 'Y-m-d'
 LANGUAGE_CODE = 'en-us'
-TIME_FORMAT = WAGTAIL_TIME_FORMAT = '%H:%M:%SZ'
+TIME_FORMAT = '%H:%M:%SZ'
 TIME_ZONE = 'UTC'
 # Django's "InternationalizatioN" (I18N) setting is really about language translation; support for
 # different spellings of English, and different languages, would be welcome additions.
@@ -143,11 +129,6 @@ MEDIA_URL = '/media/'
 # https://docs.djangoproject.com/en/5.1/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
-
-WAGTAIL_SITE_NAME = 'Well Plated Demo'
-WAGTAILADMIN_BASE_URL = 'off'
-
-FORMS_URLFIELD_ASSUME_HTTPS = True
 
 SHELL_PLUS_PRINT_SQL_TRUNCATE = None
 

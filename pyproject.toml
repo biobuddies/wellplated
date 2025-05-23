@@ -59,6 +59,7 @@ ignore_missing_imports = true
 
 [tool.pytest.ini_options]
 DJANGO_SETTINGS_MODULE = 'demodj.settings'
+addopts = '--cov=wellplated --cov-report=term-missing:skip-covered --verbose'
 django_debug_mode = 'keep'
 python_files = ['tests.py', 'test_*.py']
 
