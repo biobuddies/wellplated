@@ -4,9 +4,15 @@ CREATE TABLE IF NOT EXISTS "wellplated_format" (
     "right_column" smallint unsigned NOT NULL CHECK ("right_column" >= 0),
     "prefix" varchar(11) NOT NULL UNIQUE,
     "bottom_right_prefix" varchar(14) GENERATED ALWAYS AS (
-        COALESCE("bottom_row", '')
-        || COALESCE(
-            COALESCE(LPAD(CAST("right_column" AS text), 2, '0'), '') || COALESCE("prefix", ''), ''
+        (
+            COALESCE("bottom_row", '')
+            || COALESCE(
+                (
+                    COALESCE(LPAD(CAST("right_column" AS text), 2, '0'), '')
+                    || COALESCE("prefix", '')
+                ),
+                ''
+            )
         )
     ) STORED UNIQUE,
     "created_at" datetime NOT NULL,
@@ -23,9 +29,12 @@ CREATE TABLE IF NOT EXISTS "wellplated_container" (
     "id" integer NOT NULL PRIMARY KEY AUTOINCREMENT,
     "external_id" smallint unsigned NULL CHECK ("external_id" >= 0),
     "code" varchar(15) GENERATED ALWAYS AS (
-        COALESCE("format_id", '')
-        || COALESCE(
-            LPAD(CAST(COALESCE("external_id", "id") AS text), (15 - LENGTH("format_id")), '0'), ''
+        (
+            COALESCE("format_id", '')
+            || COALESCE(
+                LPAD(CAST(COALESCE("external_id", "id") AS text), (15 - LENGTH("format_id")), '0'),
+                ''
+            )
         )
     ) STORED UNIQUE,
     "created_at" datetime NOT NULL,

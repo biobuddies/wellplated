@@ -2,7 +2,7 @@
 
 shell=$(ps -p $$ -o 'comm=')
 [[ $shell == *bash ]] || cat <<EOD
-WARNING: includes.sh has only been tested with, and linted for, BASH. You are running $shell.
+WARNING: includes.bash has only been tested with, and linted for, BASH. You are running $shell.
 Testing multiple shells is a lot of work, and shellcheck does not support zsh.
 Run \`chsh -s /bin/bash\` or \`forceready\` to switch.
 EOD
@@ -14,6 +14,10 @@ BASH_MAJOR_VERSION=$(echo "$BASH_VERSION" | sed -E 's/^([^.]+).+/\1/')
 OPSY=$(uname -s)
 export OPSY
 
+TF_PLUGIN_CACHE_DIR="$HOME/.terraform.d/plugin-cache"
+export TF_PLUGIN_CACHE_DIR
+mkdir -p "$TF_PLUGIN_CACHE_DIR"
+
 case $OPSY in
     Darwin)
         # Apple stopped upgrading BASH, perhaps to avoid GPLv3, and switched to ZSH.
@@ -21,10 +25,11 @@ case $OPSY in
         # See devready and forceready for upgrading BASH with Brew.
         [[ $BASH_MAJOR_VERSION -gt 3 ]] || export BASH_SILENCE_DEPRECATION_WARNING=1
 
-        # On Sonoma: pre-installed file, host, and less are new enough. BASH is pre-installed, and
-        # git may have been installed with xcode, but upgrading both with brew is good.
-        BREWS='asdf bash fping git gnu-sed tmux tree'
-        export BREWS
+        # Pre-installed on Sonoma:
+        #   * Skip upgrades: host, file, less, ps
+        #   * Upgrade: bash, curl, git (may come with xcode)
+        BRWS='asdf bash curl fping git gnu-sed tmux tree'
+        export BRWS
 
         # https://github.com/ansible/ansible/issues/32499
         export OBJC_DISABLE_INITIALIZE_FORK_SAFETY=YES
@@ -68,11 +73,12 @@ export ASDF_PLUGINS
 DEBS='bash bind9-host curl file fping git less procps tmux tree'
 export DEBS
 
-# We should probably deprecate `PACKAGES` in favor of `DEBS` and `BREWS`.
+# We should probably deprecate `PACKAGES` in favor of `DEBS` and `BRWS`.
 PACKAGES="$DEBS"
 export PACKAGES
 
 # Aliases only work in interactive shells
+alias grep='grep --color=auto'
 alias jq='jq --color-output'
 alias ls='ls --color=auto'
 
@@ -251,10 +257,10 @@ Use feature branches with "GitHub Flow"'
     [[ $(git config --global rebase.autosquash) == true ]] \
         || echo 'WARNING: git rebase.autosquash != true
 Act on "fixup!" and "squash!" commit title prefixes'
-    if [[ $OS == Darwin ]]; then
+    if [[ $OPSY == Darwin ]]; then
         if [[ $(command -v brew) ]]; then
             installed_brews="$(brew list)"
-            for brew in $BREWS; do
+            for brew in $BRWS; do
                 if [[ $installed_brews != *$brew* ]]; then
                     echo "WARNING: Homebrew package $brew not installed"
                 fi
@@ -284,6 +290,13 @@ Act on "fixup!" and "squash!" commit title prefixes'
     fi
 }
 
+ups() {
+    : 'Uv venv and Pip Sync and similar for npm'
+    [[ ! -f package-lock.json ]] || npm install --frozen-lockfile
+    [[ -f requirements.txt ]] || return
+    uv venv && uv pip sync "$@" requirements.txt
+}
+
 asdf_url=https://github.com/asdf-vm/asdf/releases/download/v0.16.7/asdf-v0.16.7-linux-amd64.tar.gz
 
 forceready() {
@@ -308,7 +321,7 @@ forceready() {
         )"
         eval "$(/opt/homebrew/bin/brew shellenv)"
         # shellcheck disable=SC2086
-        brew install --no-interaction --quiet $BREWS
+        brew install --quiet $BRWS
         [[ -f ~/.config/git/ignore ]] || curl --fail --show-error --silent --output ~/.config/git/ignore \
             https://raw.githubusercontent.com/github/gitignore/master/Global/macOS.gitignore
         defaults write NSGlobalDomain ApplePressAndHoldEnabled -bool false
@@ -365,7 +378,9 @@ export INSH_EMAIL=youremail@yourdomain.tld; forceready'
     git config --global rebase.autosquash true
 
     asdf current
-    # might be nice to show tofu, python terraform, versions
+    # might be nice to show tofu, python, terraform, versions like calling pathver
+
+    ups "$@"
 }
 
 envi() {
@@ -380,7 +395,7 @@ envi() {
 }
 
 functions() {
-    : 'list FUNCTIONS defined by includes.sh'
+    : 'list FUNCTIONS defined by .biobuddies/includes.bash'
     gsed -En 's/^ *([^(]+)\(\) \{$/\1/; T; N; s/\n +: /\t\t/; p' "${BASH_SOURCE[0]}"
     echo -e "\nRun \`type function_name\` to display details.\n"
     echo Environment Variables
@@ -450,7 +465,8 @@ orgn() {
     if [[ ${GITHUB_REPOSITORY_OWNER-} ]]; then
         echo "$GITHUB_REPOSITORY_OWNER"
     else
-        git remote get-url origin | gsed -E 's,.+github.com/([^/]+).+,\1,'
+        # git will have colon :, https will have slash /
+        git remote get-url origin | sed -E 's,.+github.com[:/]([^/]+).+,\1,'
     fi
 }
 
@@ -477,23 +493,6 @@ pcam() {
 pcm() {
     : 'run Pre-Commit on modified files including Manual stage hooks'
     pre-commit run --hook-stage manual "$@"
-}
-
-pctam() {
-    : 'run Pre-Commit Try-repo on All files including Manual stage hooks'
-    if [[ -z $* ]]; then
-        echo 'Please specify a specific hook to run, such as mypy.'
-        echo 'The gitignore hooks conflict with each other; includes-sh hook will revert changes.'
-        return 1
-    fi
-    pre-commit try-repo \
-        --all-files \
-        --color always \
-        --hook-stage manual \
-        --show-diff-on-failure \
-        --verbose \
-        . \
-        "$@"
 }
 
 release() {
@@ -574,11 +573,6 @@ upc() {
         --output-file requirements.txt \
         --python-platform linux \
         pyproject.toml $([[ -f requirements.in ]] && echo requirements.in)
-}
-
-ups() {
-    : 'Uv venv and Pip Sync'
-    uv venv && uv pip sync "$@" requirements.txt
 }
 
 uuid() {
