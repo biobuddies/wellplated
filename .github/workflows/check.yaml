@@ -10,9 +10,7 @@ jobs:
                       && a \
                       && pcam --color always --show-diff-on-failure
             - run: .venv/bin/python -m manage check
-            - run: |
-                  .venv/bin/python -m pytest --cov=wellplated \
-                      --cov-report=term-missing:skip-covered
+            - run: .venv/bin/python -m pytest
             - run: .venv/bin/python -m build
             - run: .venv/bin/twine check dist/*
 
